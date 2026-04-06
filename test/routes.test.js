@@ -106,17 +106,4 @@ describe('API Routes', () => {
     });
   });
 
-  describe('GET /:code', () => {
-    it('redirects valid code to /', async () => {
-      const code = participants[0].code;
-      const res = await app.inject({ method: 'GET', url: `/${code}` });
-      assert.equal(res.statusCode, 302);
-      assert.equal(res.headers.location, `/?code=${code}`);
-    });
-
-    it('does not match invalid code', async () => {
-      const res = await app.inject({ method: 'GET', url: '/invalidcode' });
-      assert.notEqual(res.statusCode, 302);
-    });
-  });
 });

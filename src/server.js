@@ -1,28 +1,39 @@
 import Fastify from 'fastify';
-import fastifyStatic from '@fastify/static';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { registerRoutes } from './routes.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const publicDir = join(__dirname, '..', 'public');
 const participants = JSON.parse(readFileSync(join(__dirname, '..', 'participants.json'), 'utf-8'));
 
 const app = Fastify({ logger: true });
 
-// Serve static files from public/
-await app.register(fastifyStatic, {
-  root: join(__dirname, '..', 'public'),
-  prefix: '/',
-  index: false,
+// Pre-load static files
+const indexHtml = readFileSync(join(publicDir, 'index.html'), 'utf-8');
+const styleCss = readFileSync(join(publicDir, 'style.css'), 'utf-8');
+const appJs = readFileSync(join(publicDir, 'app.js'), 'utf-8');
+
+// Serve index.html for root and participant codes
+const serveIndex = async (request, reply) => {
+  reply.type('text/html').send(indexHtml);
+};
+
+app.get('/', serveIndex);
+for (const p of participants) {
+  app.get(`/${p.code}`, serveIndex);
+}
+
+// Serve static assets
+app.get('/style.css', async (request, reply) => {
+  reply.type('text/css').send(styleCss);
+});
+app.get('/app.js', async (request, reply) => {
+  reply.type('application/javascript').send(appJs);
 });
 
-// Serve index.html for root
-app.get('/', async (request, reply) => {
-  return reply.sendFile('index.html');
-});
-
-// Register API and redirect routes
+// Register API routes
 registerRoutes(app, participants);
 
 const port = parseInt(process.env.PORT || '3000', 10);

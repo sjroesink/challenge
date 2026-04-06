@@ -1,10 +1,8 @@
 (function () {
-  // Check for code in URL query param (from redirect)
-  const params = new URLSearchParams(window.location.search);
-  const codeFromUrl = params.get('code');
-  if (codeFromUrl) {
-    localStorage.setItem('participant-code', codeFromUrl);
-    // Clean URL
+  // Check for code in URL path (e.g. /sandoor)
+  const path = window.location.pathname.slice(1);
+  if (path && !path.includes('.') && !path.startsWith('api')) {
+    localStorage.setItem('participant-code', path);
     window.history.replaceState({}, '', '/');
   }
 

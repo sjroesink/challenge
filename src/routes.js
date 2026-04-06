@@ -36,13 +36,6 @@ function registerRoutes(app, participants) {
     insertCheckin(code, today, sets);
     return { success: true, day: today, sets };
   });
-
-  // Code redirect — only match known participant codes
-  for (const code of codeSet) {
-    app.get(`/${code}`, async (request, reply) => {
-      return reply.redirect(`/?code=${code}`);
-    });
-  }
 }
 
 export { registerRoutes };
