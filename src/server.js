@@ -14,6 +14,12 @@ const app = Fastify({ logger: true });
 await app.register(fastifyStatic, {
   root: join(__dirname, '..', 'public'),
   prefix: '/',
+  index: false,
+});
+
+// Serve index.html for root
+app.get('/', async (request, reply) => {
+  return reply.sendFile('index.html');
 });
 
 // Register API and redirect routes
