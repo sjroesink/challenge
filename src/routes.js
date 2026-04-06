@@ -37,21 +37,12 @@ function registerRoutes(app, participants) {
     return { success: true, day: today, sets };
   });
 
-  // Code redirect — must be registered last (catch-all single segment)
-  app.get('/:code', async (request, reply) => {
-    const { code } = request.params;
-
-    // Skip static files and api routes
-    if (code.includes('.') || code === 'api') {
-      return reply.status(404).send({ error: 'Not found' });
-    }
-
-    if (!codeSet.has(code)) {
-      return reply.status(404).send({ error: 'Unknown participant code' });
-    }
-
-    return reply.redirect(`/?code=${code}`);
-  });
+  // Code redirect — only match known participant codes
+  for (const code of codeSet) {
+    app.get(`/${code}`, async (request, reply) => {
+      return reply.redirect(`/?code=${code}`);
+    });
+  }
 }
 
 export { registerRoutes };

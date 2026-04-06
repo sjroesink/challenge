@@ -114,9 +114,9 @@ describe('API Routes', () => {
       assert.equal(res.headers.location, `/?code=${code}`);
     });
 
-    it('returns 404 for invalid code', async () => {
+    it('does not match invalid code', async () => {
       const res = await app.inject({ method: 'GET', url: '/invalidcode' });
-      assert.equal(res.statusCode, 404);
+      assert.notEqual(res.statusCode, 302);
     });
   });
 });
