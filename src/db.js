@@ -41,4 +41,11 @@ function insertCheckin(code, day, sets) {
   return { code, day, sets, checked_at };
 }
 
-export { getDb, getAllCheckins, getCheckin, insertCheckin };
+function closeDb() {
+  if (db) {
+    db.close();
+    db = null;
+  }
+}
+
+export { getDb, getAllCheckins, getCheckin, insertCheckin, closeDb };

@@ -9,15 +9,20 @@ process.env.NODE_ENV = 'test';
 // We'll test the routes by building the app
 import { registerRoutes } from '../src/routes.js';
 import { getCurrentDay } from '../src/day.js';
+import { closeDb } from '../src/db.js';
 
 const participants = JSON.parse(readFileSync('participants.json', 'utf-8'));
+const DB_PATH = 'data/challenge.db';
 
 describe('API Routes', () => {
   let app;
 
   before(async () => {
-    // Clean test db
-    rmSync('data/challenge-test.db', { force: true });
+    // Clean db from previous runs
+    closeDb();
+    rmSync(DB_PATH, { force: true });
+    rmSync(`${DB_PATH}-wal`, { force: true });
+    rmSync(`${DB_PATH}-shm`, { force: true });
 
     app = Fastify();
     registerRoutes(app, participants);
@@ -26,7 +31,10 @@ describe('API Routes', () => {
 
   after(async () => {
     await app.close();
-    rmSync('data/challenge-test.db', { force: true });
+    closeDb();
+    rmSync(DB_PATH, { force: true });
+    rmSync(`${DB_PATH}-wal`, { force: true });
+    rmSync(`${DB_PATH}-shm`, { force: true });
   });
 
   describe('GET /api/progress', () => {
