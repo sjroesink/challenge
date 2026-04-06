@@ -9,13 +9,15 @@
 <body>
   <div class="container">
     <header>
-      <h1>Push-Up Challenge</h1>
+      <div>
+        <h1>💪 Push-Up Challenge</h1>
+      </div>
       <div id="user-badge" class="badge hidden"></div>
     </header>
 
     <section id="checkin-section" class="checkin hidden">
       <div class="checkin-info">
-        <div class="checkin-label">Vandaag</div>
+        <div class="checkin-label" id="checkin-label"></div>
         <div class="checkin-day" id="checkin-day"></div>
       </div>
       <div class="checkin-action">
@@ -23,7 +25,7 @@
           <span class="sets-label-text">Sets:</span>
           <input type="number" id="sets-input" min="1" value="1" />
         </div>
-        <button id="checkin-btn" class="btn-checkin">Gehaald!</button>
+        <button id="checkin-btn" class="btn-checkin">✓ Gehaald!</button>
       </div>
     </section>
 

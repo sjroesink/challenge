@@ -46,8 +46,9 @@
     const alreadyDone = data.checkins.some(c => c.name === name && c.day === today);
     if (alreadyDone) return;
 
+    document.getElementById('checkin-label').textContent = `Vandaag \u2014 Dag ${today}`;
     document.getElementById('checkin-day').textContent =
-      `Dag ${today} \u2014 ${today} push-up${today === 1 ? '' : 's'}`;
+      `${today} push-up${today === 1 ? '' : 's'}`;
 
     section.classList.remove('hidden');
 
@@ -111,7 +112,7 @@
 
       // Day label
       const dayTd = document.createElement('td');
-      dayTd.innerHTML = `Dag ${day}${day === data.today ? '<span class="today-label">vandaag</span>' : ''}`;
+      dayTd.innerHTML = `<span class="day-num">Dag ${day}</span>${day === data.today ? '<span class="today-label">vandaag</span>' : ''}`;
       tr.appendChild(dayTd);
 
       // Each participant
