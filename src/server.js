@@ -25,12 +25,12 @@ for (const p of participants) {
   app.get(`/${p.code}`, serveIndex);
 }
 
-// Serve static assets
+// Serve static assets (no-cache to prevent CDN stale content)
 app.get('/style.css', async (request, reply) => {
-  reply.type('text/css').send(styleCss);
+  reply.header('Cache-Control', 'no-cache').type('text/css').send(styleCss);
 });
 app.get('/app.js', async (request, reply) => {
-  reply.type('application/javascript').send(appJs);
+  reply.header('Cache-Control', 'no-cache').type('application/javascript').send(appJs);
 });
 
 // Register API routes
