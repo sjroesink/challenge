@@ -2,18 +2,21 @@
   --bg: #0f1117;
   --bg-surface: #1a1f2e;
   --bg-elevated: #1e293b;
-  --text: #e2e8f0;
+  --text: #f8fafc;
+  --text-secondary: #e2e8f0;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
   --text-dimmer: #475569;
   --border: #1e2533;
   --accent: #38bdf8;
   --success: #22c55e;
+  --success-dark: #052e16;
   --danger: #ef4444;
   --checkin-bg: linear-gradient(135deg, #1e3a5f 0%, #1a2744 100%);
   --checkin-border: rgba(37, 99, 235, 0.27);
   --input-bg: #0f172a;
   --input-border: #334155;
+  --today-row-bg: rgba(30, 41, 59, 0.27);
 }
 
 @media (prefers-color-scheme: light) {
@@ -22,17 +25,20 @@
     --bg-surface: #ffffff;
     --bg-elevated: #f1f5f9;
     --text: #0f172a;
+    --text-secondary: #1e293b;
     --text-muted: #475569;
     --text-dim: #64748b;
     --text-dimmer: #94a3b8;
     --border: #e2e8f0;
     --accent: #0284c7;
     --success: #16a34a;
+    --success-dark: #f0fdf4;
     --danger: #dc2626;
     --checkin-bg: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
     --checkin-border: rgba(37, 99, 235, 0.2);
     --input-bg: #ffffff;
     --input-border: #cbd5e1;
+    --today-row-bg: rgba(241, 245, 249, 0.7);
   }
 }
 
@@ -52,7 +58,7 @@ body {
 .container {
   max-width: 720px;
   margin: 0 auto;
-  padding: 0 16px;
+  padding: 0 20px;
 }
 
 /* Header */
@@ -60,13 +66,14 @@ header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 24px 0;
+  padding: 24px 8px;
   border-bottom: 1px solid var(--border);
 }
 
 header h1 {
-  font-size: 20px;
+  font-size: 22px;
   letter-spacing: -0.5px;
+  color: var(--text);
 }
 
 .badge {
@@ -82,7 +89,7 @@ header h1 {
   font-weight: 600;
 }
 
-/* Check-in */
+/* Check-in card */
 .checkin {
   margin: 20px 0;
   background: var(--checkin-bg);
@@ -93,11 +100,11 @@ header h1 {
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
 }
 
 .checkin-label {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -107,6 +114,7 @@ header h1 {
 .checkin-day {
   font-size: 20px;
   font-weight: 700;
+  color: var(--text-secondary);
 }
 
 .checkin-action {
@@ -115,7 +123,7 @@ header h1 {
   gap: 10px;
 }
 
-.sets-label {
+.sets-input-group {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -123,25 +131,33 @@ header h1 {
   border: 1px solid var(--input-border);
   border-radius: 8px;
   padding: 8px 12px;
+}
+
+.sets-label-text {
   font-size: 13px;
   color: var(--text-muted);
 }
 
-.sets-label input {
+.sets-input-group input {
   background: var(--bg-elevated);
   color: var(--text);
   border: 1px solid var(--input-border);
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: 4px 10px;
   font-size: 15px;
   font-weight: 600;
   width: 50px;
   text-align: center;
 }
 
+.sets-input-group input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
 .btn-checkin {
   background: var(--success);
-  color: #052e16;
+  color: var(--success-dark);
   font-weight: 700;
   padding: 10px 20px;
   border-radius: 8px;
@@ -149,6 +165,7 @@ header h1 {
   font-size: 14px;
   cursor: pointer;
   white-space: nowrap;
+  transition: filter 0.15s;
 }
 
 .btn-checkin:hover {
@@ -162,7 +179,7 @@ header h1 {
 
 /* Progress table */
 #progress-section {
-  margin: 20px 0 40px;
+  margin: 24px 0 40px;
   overflow-x: auto;
 }
 
@@ -174,10 +191,10 @@ table {
 
 thead th {
   text-align: center;
-  padding: 10px 12px;
+  padding: 12px 12px;
   color: var(--text-muted);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   border-bottom: 2px solid var(--border);
 }
 
@@ -192,10 +209,11 @@ thead th:first-child {
 
 tbody tr {
   border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
 }
 
 tbody td {
-  padding: 10px 12px;
+  padding: 12px 12px;
   text-align: center;
 }
 
@@ -205,13 +223,13 @@ tbody td:first-child {
   font-weight: 500;
 }
 
+.day-today {
+  background: var(--today-row-bg);
+}
+
 .day-today td:first-child {
   color: var(--accent);
   font-weight: 700;
-}
-
-.day-today {
-  background: rgba(30, 41, 59, 0.27);
 }
 
 .cell-done {
