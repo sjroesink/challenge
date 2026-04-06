@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Push-Up Challenge</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Push-Up Challenge</h1>
+      <div id="user-badge" class="badge hidden"></div>
+    </header>
+
+    <section id="checkin-section" class="checkin hidden">
+      <div class="checkin-info">
+        <div class="checkin-label">Vandaag</div>
+        <div class="checkin-day" id="checkin-day"></div>
+      </div>
+      <div class="checkin-action">
+        <label class="sets-label">
+          Sets:
+          <input type="number" id="sets-input" min="1" value="1" />
+        </label>
+        <button id="checkin-btn" class="btn-checkin">Gehaald!</button>
+      </div>
+    </section>
+
+    <section id="progress-section">
+      <table id="progress-table">
+        <thead id="progress-head"></thead>
+        <tbody id="progress-body"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
