@@ -7,33 +7,43 @@
   }
 
   const code = localStorage.getItem('participant-code');
+  let myName = null;
+
+  async function init() {
+    // Resolve own name from code
+    if (code) {
+      const meRes = await fetch('/api/me', {
+        headers: { 'X-Participant-Code': code },
+      });
+      if (meRes.ok) {
+        const me = await meRes.json();
+        myName = me.name;
+      }
+    }
+    loadProgress();
+  }
 
   async function loadProgress() {
     const res = await fetch('/api/progress');
     const data = await res.json();
-    renderBadge(data, code);
-    renderCheckin(data, code);
-    renderTable(data, code);
+    renderBadge(myName);
+    renderCheckin(data, myName);
+    renderTable(data);
   }
 
-  function renderBadge(data, code) {
+  function renderBadge(name) {
     const badge = document.getElementById('user-badge');
-    if (!code) return;
-    const participant = data.participants.find(p => p.code === code);
-    if (!participant) return;
-    badge.innerHTML = `Ingelogd als <strong>${participant.name}</strong>`;
+    if (!name) return;
+    badge.innerHTML = `Ingelogd als <strong>${name}</strong>`;
     badge.classList.remove('hidden');
   }
 
-  function renderCheckin(data, code) {
+  function renderCheckin(data, name) {
     const section = document.getElementById('checkin-section');
-    if (!code) return;
-
-    const participant = data.participants.find(p => p.code === code);
-    if (!participant) return;
+    if (!name) return;
 
     const today = data.today;
-    const alreadyDone = data.checkins.some(c => c.code === code && c.day === today);
+    const alreadyDone = data.checkins.some(c => c.name === name && c.day === today);
     if (alreadyDone) return;
 
     document.getElementById('checkin-day').textContent =
@@ -72,25 +82,25 @@
     });
   }
 
-  function renderTable(data, code) {
+  function renderTable(data) {
     const head = document.getElementById('progress-head');
     const body = document.getElementById('progress-body');
 
     // Build header
     const headerRow = document.createElement('tr');
     headerRow.innerHTML = '<th>Dag</th>';
-    data.participants.forEach(p => {
+    data.participants.forEach(name => {
       const th = document.createElement('th');
-      th.textContent = p.name;
+      th.textContent = name;
       headerRow.appendChild(th);
     });
     head.innerHTML = '';
     head.appendChild(headerRow);
 
-    // Build checkin lookup: { "code:day": sets }
+    // Build checkin lookup: { "name:day": sets }
     const lookup = {};
     data.checkins.forEach(c => {
-      lookup[`${c.code}:${c.day}`] = c.sets;
+      lookup[`${c.name}:${c.day}`] = c.sets;
     });
 
     // Build rows (newest day first)
@@ -105,9 +115,9 @@
       tr.appendChild(dayTd);
 
       // Each participant
-      data.participants.forEach(p => {
+      data.participants.forEach(name => {
         const td = document.createElement('td');
-        const key = `${p.code}:${day}`;
+        const key = `${name}:${day}`;
         if (lookup[key] !== undefined) {
           td.innerHTML = `<span class="cell-done">\u2713</span> <span class="cell-sets">${lookup[key]}s</span>`;
         } else if (day < data.today) {
@@ -122,5 +132,5 @@
     }
   }
 
-  loadProgress();
+  init();
 })();
