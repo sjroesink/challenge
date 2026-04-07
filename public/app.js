@@ -83,6 +83,27 @@
     });
   }
 
+  async function promptCheckin(day) {
+    const setsStr = window.prompt(`In hoeveel sets heb je dag ${day} (${day} push-up${day === 1 ? '' : 's'}) gedaan?`, '1');
+    if (setsStr === null) return;
+    const sets = parseInt(setsStr, 10);
+    if (!sets || sets < 1) {
+      alert('Geef een geldig aantal sets op');
+      return;
+    }
+    const res = await fetch('/api/checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Participant-Code': code },
+      body: JSON.stringify({ sets, day }),
+    });
+    if (res.ok) {
+      loadProgress();
+    } else {
+      const err = await res.json();
+      alert(err.error || 'Er ging iets mis');
+    }
+  }
+
   function renderTable(data) {
     const head = document.getElementById('progress-head');
     const body = document.getElementById('progress-body');
@@ -125,6 +146,12 @@
           td.innerHTML = '<span class="cell-missed">\u2717</span>';
         } else {
           td.innerHTML = '<span class="cell-pending">\u2014</span>';
+        }
+        // Make own cells clickable for backfill (today or past days, only if not done)
+        if (name === myName && lookup[key] === undefined) {
+          td.classList.add('cell-clickable');
+          td.title = `Inchecken voor dag ${day}`;
+          td.addEventListener('click', () => promptCheckin(day));
         }
         tr.appendChild(td);
       });

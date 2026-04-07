@@ -43,13 +43,18 @@ function registerRoutes(app, participants) {
     }
 
     const today = getCurrentDay();
-    const existing = getCheckin(code, today);
-    if (existing) {
-      return reply.status(409).send({ error: 'Already checked in today' });
+    const day = request.body?.day ?? today;
+    if (typeof day !== 'number' || !Number.isInteger(day) || day < 1 || day > today) {
+      return reply.status(400).send({ error: 'Day must be between 1 and today' });
     }
 
-    insertCheckin(code, today, sets);
-    return { success: true, day: today, sets };
+    const existing = getCheckin(code, day);
+    if (existing) {
+      return reply.status(409).send({ error: 'Already checked in for this day' });
+    }
+
+    insertCheckin(code, day, sets);
+    return { success: true, day, sets };
   });
 }
 
