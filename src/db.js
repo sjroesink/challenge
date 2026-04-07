@@ -21,7 +21,13 @@ function getDb() {
       sets INTEGER NOT NULL,
       checked_at TEXT NOT NULL,
       PRIMARY KEY (code, day)
-    )
+    );
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      endpoint TEXT PRIMARY KEY,
+      code TEXT NOT NULL,
+      subscription TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
   `);
 
   return db;
@@ -41,6 +47,24 @@ function insertCheckin(code, day, sets) {
   return { code, day, sets, checked_at };
 }
 
+function getAllSubscriptions() {
+  return getDb().prepare('SELECT endpoint, code, subscription FROM push_subscriptions').all()
+    .map(r => ({ endpoint: r.endpoint, code: r.code, subscription: JSON.parse(r.subscription) }));
+}
+
+function upsertSubscription(code, subscription) {
+  const now = new Date().toISOString();
+  getDb().prepare(`
+    INSERT INTO push_subscriptions (endpoint, code, subscription, created_at)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(endpoint) DO UPDATE SET code = excluded.code, subscription = excluded.subscription
+  `).run(subscription.endpoint, code, JSON.stringify(subscription), now);
+}
+
+function deleteSubscription(endpoint) {
+  getDb().prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(endpoint);
+}
+
 function closeDb() {
   if (db) {
     db.close();
@@ -48,4 +72,4 @@ function closeDb() {
   }
 }
 
-export { getDb, getAllCheckins, getCheckin, insertCheckin, closeDb };
+export { getDb, getAllCheckins, getCheckin, insertCheckin, getAllSubscriptions, upsertSubscription, deleteSubscription, closeDb };

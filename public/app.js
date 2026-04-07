@@ -8,9 +8,18 @@
 
   const code = localStorage.getItem('participant-code');
   let myName = null;
-  let knownTodayCheckins = new Set(); // "name" strings of today's check-ins we've already seen
+  let swRegistration = null;
 
   async function init() {
+    // Register service worker for PWA + push
+    if ('serviceWorker' in navigator) {
+      try {
+        swRegistration = await navigator.serviceWorker.register('/sw.js');
+      } catch (err) {
+        console.error('SW registration failed:', err);
+      }
+    }
+
     // Resolve own name from code
     if (code) {
       const meRes = await fetch('/api/me', {
@@ -22,26 +31,64 @@
       }
     }
     setupNotifications();
-    loadProgress(true);
-    // Poll every 60 seconds
-    setInterval(() => loadProgress(false), 60000);
+    loadProgress();
+    // Light polling for UI refresh (every 60s)
+    setInterval(loadProgress, 60000);
   }
 
   function setupNotifications() {
     const btn = document.getElementById('notify-btn');
-    if (!('Notification' in window)) return;
+    if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (!code) return; // Need login to subscribe
     btn.classList.remove('hidden');
     updateNotifyBtn();
     btn.addEventListener('click', async () => {
-      if (Notification.permission === 'default') {
-        await Notification.requestPermission();
-        updateNotifyBtn();
-      } else if (Notification.permission === 'granted') {
-        new Notification('Push-Up Challenge', { body: 'Notificaties zijn al aan 💪' });
-      } else {
+      if (Notification.permission === 'denied') {
         alert('Notificaties zijn geblokkeerd. Sta ze toe in je browserinstellingen.');
+        return;
       }
+      if (Notification.permission === 'default') {
+        const result = await Notification.requestPermission();
+        if (result !== 'granted') return;
+      }
+      await subscribeToPush();
+      updateNotifyBtn();
     });
+
+    // Auto-subscribe if already granted
+    if (Notification.permission === 'granted') {
+      subscribeToPush().catch(err => console.error('Subscribe failed:', err));
+    }
+  }
+
+  async function subscribeToPush() {
+    if (!swRegistration) return;
+    const keyRes = await fetch('/api/push/key');
+    const { publicKey } = await keyRes.json();
+
+    let subscription = await swRegistration.pushManager.getSubscription();
+    if (!subscription) {
+      subscription = await swRegistration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+    }
+
+    await fetch('/api/push/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Participant-Code': code,
+      },
+      body: JSON.stringify({ subscription }),
+    });
+  }
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = atob(base64);
+    return Uint8Array.from([...rawData].map(c => c.charCodeAt(0)));
   }
 
   function updateNotifyBtn() {
@@ -55,29 +102,9 @@
     }
   }
 
-  function notify(title, body) {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, { body, icon: '/favicon.svg' });
-    }
-  }
-
-  async function loadProgress(isInitial) {
+  async function loadProgress() {
     const res = await fetch('/api/progress');
     const data = await res.json();
-
-    // Detect new check-ins for today (skip on initial load to avoid spamming)
-    const currentTodayCheckins = new Set(
-      data.checkins.filter(c => c.day === data.today).map(c => c.name)
-    );
-    if (!isInitial) {
-      for (const name of currentTodayCheckins) {
-        if (!knownTodayCheckins.has(name) && name !== myName) {
-          notify('Push-Up Challenge 💪', `${name} heeft dag ${data.today} gehaald!`);
-        }
-      }
-    }
-    knownTodayCheckins = currentTodayCheckins;
-
     renderBadge(myName);
     renderCheckin(data, myName);
     renderTable(data);

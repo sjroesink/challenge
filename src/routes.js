@@ -1,5 +1,6 @@
 import { getCurrentDay } from './day.js';
-import { getAllCheckins, getCheckin, insertCheckin } from './db.js';
+import { getAllCheckins, getCheckin, insertCheckin, upsertSubscription } from './db.js';
+import { getPublicKey, notifyAllExcept } from './push.js';
 
 function registerRoutes(app, participants) {
   const codeSet = new Set(participants.map(p => p.code));
@@ -54,7 +55,34 @@ function registerRoutes(app, participants) {
     }
 
     insertCheckin(code, day, sets);
+
+    // Send push notification to others if checking in for today
+    if (day === today) {
+      notifyAllExcept(code, {
+        title: 'Push-Up Challenge 💪',
+        body: `${codeToName[code]} heeft dag ${day} gehaald!`,
+      }).catch(err => console.error('Notify failed:', err));
+    }
+
     return { success: true, day, sets };
+  });
+
+  // Web Push endpoints
+  app.get('/api/push/key', async () => {
+    return { publicKey: getPublicKey() };
+  });
+
+  app.post('/api/push/subscribe', async (request, reply) => {
+    const code = request.headers['x-participant-code'];
+    if (!code || !codeSet.has(code)) {
+      return reply.status(401).send({ error: 'Invalid participant code' });
+    }
+    const subscription = request.body?.subscription;
+    if (!subscription || !subscription.endpoint) {
+      return reply.status(400).send({ error: 'Invalid subscription' });
+    }
+    upsertSubscription(code, subscription);
+    return { success: true };
   });
 }
 

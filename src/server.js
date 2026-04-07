@@ -14,6 +14,10 @@ const app = Fastify({ logger: true });
 // Pre-load static files with cache-busting hashes
 const styleCss = readFileSync(join(publicDir, 'style.css'), 'utf-8');
 const appJs = readFileSync(join(publicDir, 'app.js'), 'utf-8');
+const swJs = readFileSync(join(publicDir, 'sw.js'), 'utf-8');
+const manifestJson = readFileSync(join(publicDir, 'manifest.json'), 'utf-8');
+const iconSvg = readFileSync(join(publicDir, 'icon.svg'), 'utf-8');
+
 const styleHash = createHash('md5').update(styleCss).digest('hex').slice(0, 8);
 const appHash = createHash('md5').update(appJs).digest('hex').slice(0, 8);
 
@@ -31,12 +35,23 @@ for (const p of participants) {
   app.get(`/${p.code}`, serveIndex);
 }
 
-// Serve static assets with long cache (hash in URL busts cache)
+// Hashed static assets (long cache)
 app.get(`/style.${styleHash}.css`, async (request, reply) => {
   reply.header('Cache-Control', 'public, max-age=31536000, immutable').type('text/css').send(styleCss);
 });
 app.get(`/app.${appHash}.js`, async (request, reply) => {
   reply.header('Cache-Control', 'public, max-age=31536000, immutable').type('application/javascript').send(appJs);
+});
+
+// PWA assets (no cache)
+app.get('/sw.js', async (request, reply) => {
+  reply.header('Cache-Control', 'no-cache').type('application/javascript').send(swJs);
+});
+app.get('/manifest.json', async (request, reply) => {
+  reply.header('Cache-Control', 'no-cache').type('application/manifest+json').send(manifestJson);
+});
+app.get('/icon.svg', async (request, reply) => {
+  reply.header('Cache-Control', 'public, max-age=86400').type('image/svg+xml').send(iconSvg);
 });
 
 // Register API routes
