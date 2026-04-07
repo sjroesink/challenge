@@ -8,6 +8,7 @@
 
   const code = localStorage.getItem('participant-code');
   let myName = null;
+  let knownTodayCheckins = new Set(); // "name" strings of today's check-ins we've already seen
 
   async function init() {
     // Resolve own name from code
@@ -20,12 +21,63 @@
         myName = me.name;
       }
     }
-    loadProgress();
+    setupNotifications();
+    loadProgress(true);
+    // Poll every 60 seconds
+    setInterval(() => loadProgress(false), 60000);
   }
 
-  async function loadProgress() {
+  function setupNotifications() {
+    const btn = document.getElementById('notify-btn');
+    if (!('Notification' in window)) return;
+    btn.classList.remove('hidden');
+    updateNotifyBtn();
+    btn.addEventListener('click', async () => {
+      if (Notification.permission === 'default') {
+        await Notification.requestPermission();
+        updateNotifyBtn();
+      } else if (Notification.permission === 'granted') {
+        new Notification('Push-Up Challenge', { body: 'Notificaties zijn al aan 💪' });
+      } else {
+        alert('Notificaties zijn geblokkeerd. Sta ze toe in je browserinstellingen.');
+      }
+    });
+  }
+
+  function updateNotifyBtn() {
+    const btn = document.getElementById('notify-btn');
+    if (Notification.permission === 'granted') {
+      btn.classList.add('active');
+      btn.title = 'Notificaties staan aan';
+    } else {
+      btn.classList.remove('active');
+      btn.title = 'Notificaties inschakelen';
+    }
+  }
+
+  function notify(title, body) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification(title, { body, icon: '/favicon.svg' });
+    }
+  }
+
+  async function loadProgress(isInitial) {
     const res = await fetch('/api/progress');
     const data = await res.json();
+
+    // Detect new check-ins for today (skip on initial load to avoid spamming)
+    const currentTodayCheckins = new Set(
+      data.checkins.filter(c => c.day === data.today).map(c => c.name)
+    );
+    if (!isInitial) {
+      for (const name of currentTodayCheckins) {
+        if (!knownTodayCheckins.has(name) && name !== myName) {
+          notify('Push-Up Challenge 💪', `${name} heeft dag ${data.today} gehaald!`);
+        }
+      }
+    }
+    knownTodayCheckins = currentTodayCheckins;
+
     renderBadge(myName);
     renderCheckin(data, myName);
     renderTable(data);

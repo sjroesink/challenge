@@ -67,6 +67,31 @@ header h1 {
   letter-spacing: -0.5px;
 }
 
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-notify {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 16px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: filter 0.15s, color 0.15s;
+}
+
+.btn-notify:hover { filter: brightness(1.2); }
+.btn-notify.active { color: var(--accent); }
+
 .badge {
   background: var(--bg-elevated);
   padding: 6px 14px;
