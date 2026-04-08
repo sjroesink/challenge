@@ -141,38 +141,30 @@ export const TEXTS = [
   'Fucking sloophamer van een mens ben jij. 🔨',
 ];
 
-// YouTube video IDs — short funny / hype clips
+// YouTube video IDs — curated funny clips
 export const VIDEOS = [
-  'dQw4w9WgXcQ', // Rick Astley - Never Gonna Give You Up
-  'ZZ5LpwO-An4', // HEYYEYAAEYAAAEYAEYAA
-  'y6120QOlsfU', // Darude - Sandstorm
-  '9bZkp7q19f0', // Gangnam Style
-  'kfVsfOSbJY0', // Rick Roll extended
-  'L_jWHffIx5E', // Smash Mouth - All Star
-  'otCpCn0l4Wo', // HEY! Yeah Yeah Yeah
-  'djV11Xbc914', // a-ha - Take On Me
-  'fC7oUOUEEi4', // Eye of the Tiger
-  'btPJPFnesV4', // Surprise motherfucker
-  'Cl_XAGqLqdM', // Rocky training
-  'aJcpkKcsr8g', // Heyyeyaaeyaaaeyaeyaa meme
-  'CH1XGdu-hzQ', // It's over 9000!
-  'FHG2oizTlpY', // Men Without Hats - Safety Dance
-  'ru0K8uYEZWw', // Surprised Pikachu theme
-  'EYu9e7GrFg0', // Crazy frog
-  'lj-ldKkGk-Y', // Push it
-  'ACWlr4QmTkE', // Eye of the Tiger ultimate
-  '5xGZ6F1nKhk', // C+C Music Factory - Everybody Dance Now
-  'SRvCvsRp5ho', // Thunderstruck
-  'v2AC41dglnM', // AC/DC - Thunderstruck
-  'pAgnJDJN4VA', // Africa - Toto
-  'hTWKbfoikeg', // Smells Like Teen Spirit
-  'ktvTqknDobU', // Imagine Dragons - Radioactive
-  'fJ9rUzIMcZQ', // Queen - Bohemian Rhapsody
-  '1w7OgIMMRc4', // GnR - Sweet Child
-  'WM8bTdBs-cw', // Linkin Park - What I've Done
-  'eVTXPUF4Oz4', // Linkin Park - In The End
-  'hFDcoX7s6rE', // Europe - Final Countdown
-  'OMOGaugKpzs', // Pump it - Black Eyed Peas
+  '_OBlgSz8sSM',
+  'J---aiyznGQ',
+  'dQw4w9WgXcQ',
+  'mfhBM_Yay6w',
+  'txqiwrbYGrs',
+  'HPPj6viIBmU',
+  'uanDGAdQ7sE',
+  'WlzfW1VbNmI',
+  '9KNV4UXTd3k',
+  'aZgA39Obad8',
+  '514iCJDj4sQ',
+  '_bxKLEVqbMk',
+  'IByFmXm7hZM',
+  'pqzn-oqXFwA',
+  'P1tpF5CqPYE',
+  'JkonPMAG0Ss',
+  'OQSNhk5ICTI',
+  'CMNry4PE93Y',
+  '8d6voO-na6w',
+  'ydmPh4MXT3g',
+  '4r7wHMg5Yjg',
+  'b9mtM0uIQ9Q',
 ];
 
 /**
