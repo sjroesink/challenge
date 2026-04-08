@@ -1,0 +1,10 @@
+services:
+  challenge:
+    build: .
+    container_name: challenge-local
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./participants.json:/app/participants.json:ro

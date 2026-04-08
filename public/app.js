@@ -9,163 +9,11 @@
   const code = localStorage.getItem('participant-code');
   let myName = null;
   let swRegistration = null;
-  let selectedDay = null;
+  let selectedDay = null; // null = default (today)
   let latestData = null;
   let checkinBtnBound = false;
 
-  const GIMMICKS = [
-    'Beast mode geactiveerd! 💪',
-    'Je armen huilen, maar van geluk. 😭💪',
-    'Arnold Schwarzenegger is jaloers. 🏋️',
-    'Nog een dag, nog een stapje dichter bij Hulk. 💚',
-    'Push-up kampioen van de dag! 🏆',
-    'Je borstspieren sturen hun dank. ❤️',
-    'Dat was indrukwekkend, zelfs de grond is onder de indruk. 🌍',
-    'Weer een dag niet opgegeven. Legend! 🔥',
-    'Je lichaam: "dankjewel". Je geest: "nog één!" 🧠',
-    'Ondertussen zit de bank te huilen. 🛋️😢',
-    'Plank? Push-up? Gewoon lekker bezig! ⚡',
-    'De zwaartekracht heeft vandaag verloren. 🌌',
-    'Dit is hoe superhelden ontstaan. 🦸',
-    'Chuck Norris knikt goedkeurend. 👊',
-    'Spieren laden... 100% voltooid. 💪✨',
-    'Jij > gisteren. Elke dag. 📈',
-    'Kracht is een gewoonte. En jij bent consistent. 🎯',
-    'Nog zo\'n dag en de vloer geeft zich over. 🏳️',
-    'Je triceps hebben net een applausje gegeven. 👏',
-    'Dit is geen push-up, dit is een statement. 📢',
-    'Zweet = vloeibare trots. 💧',
-    'De spiegel gaat straks knipogen. 😉',
-    'Je bent letterlijk sterker dan gisteren. 📊',
-    'Rocky Balboa zet zijn muts voor je af. 🥊',
-    'Push-up fairy heeft je gezegend. 🧚',
-    'Je ademhaling zegt "kom maar op". 🌬️',
-    'De zwaartekracht had vandaag vrij genomen. Mislukt. 😤',
-    'Elke rep telt. En jij telt door. 🔢',
-    'Je schouders dragen nu officieel de wereld. 🌍',
-    'Vandaag niet geskipt. Morgen ook niet. 🚀',
-    'De challenge buigt voor jou, niet andersom. 🙇',
-    'Stoere beer-energie gedetecteerd. 🐻',
-    'Je lichaam is een tempel. Vandaag heb je gebeden. 🛕',
-    'Push-ups: cheaper than therapy, just as effective. 🧘',
-    'Dit was zo soepel, het leek wel een dans. 💃',
-    'Je hartslag doet een vreugdedansje. 💓',
-    'Iemand moet de legende zijn. Waarom jij niet? ✨',
-    'Gainz unlocked. 🔓',
-    'Je borstkas stuurt liefdesbrieven naar je armen. 💌',
-    'Dat was zó goed, de tijd ging even langzamer. ⏳',
-    'Spieren? Check. Discipline? Check. Held? Check. ✅',
-    'De couch potato-versie van jou huilt van jaloezie. 🥔😭',
-    'Respect van alle vier de muren. 🧱',
-    'Je bent nu 1% dichter bij Thor. ⚡',
-    'Kleine stappen, grote gains. 👣',
-    'Je energielevels gaan door het dak. 🏠⬆️',
-    'Elke push-up is een middelvinger naar opgeven. 🖕',
-    'Vandaag was die dag. En jij was er klaar voor. 🌟',
-    'Dit telt als cardio, kracht én karakter. 💯',
-    'Je spieren fluisteren: "doe maar weer". 🤫',
-    'Jij bent het goede voorbeeld waar mensen over praten. 🗣️',
-    'Geen excuses. Alleen resultaten. 🎖️',
-    'De push-up goden glimlachen vandaag. ☀️',
-    'Alsof je push-ups at voor ontbijt. 🥞',
-    'Je bent een wandelend motivatieposter. 📜',
-    'Ja, die biceps zag ik echt. 👀',
-    'Deze dag is afgevinkt. Boom. 💥',
-    'Godverdomme, wat een beest ben jij. 🔥',
-    'Je bent harder dan de lul van een bronstige stier. 🐂',
-    'Die push-ups hadden geen schijn van kans, klootzak. 💀',
-    'Shit, zelfs je zweet heeft spieren. 💦',
-    'Fuck yeah, dat was pure rauwe kracht. 🤘',
-    'Je bent zo sterk, de vloer vraagt om genade. 🙏',
-    'Badass move, motherfucker. 😎',
-    'Kanker sterk, gast. En dat is een compliment. 💪',
-    'De grond likt je schoenen na die set. 👟',
-    'Jezus christus, wie heeft jou losgelaten? ⛓️',
-    'Zo hard dat je buurman spontaan zwanger wordt. 🤰',
-    'Dat was meer bench dan een Ikea-showroom. 🛋️',
-    'Je testosteron lekt uit het scherm. 🧪',
-    'Alpha energy. Pure, ongefilterde alpha energy. 🐺',
-    'Klotezooi wat ben jij een machine. 🤖',
-    'Die push-ups zijn gesloopt zoals een ex-relatie. 💔',
-    'Holy shit, de vloer heeft een kreukel. 😱',
-    'Je bent zo hard, diamanten zijn jaloers. 💎',
-    'Gast, zelfs Satan doet een stapje terug. 😈',
-    'Fucking hell, wat een power move. ⚡',
-    'Die was zo goed, ik krijg er kippenvel van. En ik ben code. 🥶',
-    'Shredded als een document in een advocatenkantoor. 📄',
-    'Je bent harder dan mijn wiskunde-examen. 📐',
-    'Bruut. Pure bruut. Geen ander woord voor. 🦍',
-    'Die push-ups smeekten om hun mama. 👶',
-    'Verdomme, dat was sexy sterk. 🥵',
-    'Je bent zo ripped, kleding huilt om bij je te horen. 👕',
-    'Fuck cardio, dit is een executie. ☠️',
-    'Beest van een mens. Mens van een beest. 🐺',
-    'Die laatste rep was meer dan mijn hele jaar aan sport. 😅',
-    'Kankerhard, en daar mag je trots op zijn. 🏅',
-    'Je biceps hebben een eigen postcode. 📮',
-    'Dat was geen push-up, dat was dominantie. 👑',
-    'Godverju, wat een power. ⚡',
-    'Zo sterk dat de zwaartekracht zich verontschuldigt. 🌌',
-    'Je bent een lopende waarschuwing voor zwakkelingen. ⚠️',
-    'Shit man, ik krijg spierpijn van kijken. 👁️',
-    'Die set was vuiler dan een kroeg-wc. 🚽',
-    'Je spieren hebben hun eigen zwaartekrachtsveld. 🪐',
-    'Fucking legend. En dat weet je zelf ook. 🏆',
-    'Je pompt harder dan een tiener met zijn eerste Pornhub-account. 🍆',
-    'Die vloer is vaker geneukt dan je ex. En harder. 🛏️',
-    'Zo strak dat je spieren door je shirt willen breken om hallo te zeggen. 👋',
-    'Je zweet ruikt naar overwinning en slechte beslissingen. 💦',
-    'Harder dan de ochtendlat van een twintiger. 🌅',
-    'Die push-ups waren intiemer dan je laatste date. 💋',
-    'Je bent zo ripped dat vrouwen zwanger worden van een blik alleen. 👀',
-    'Fuck, je armen zijn dikker dan het IQ van je baas. 🧠',
-    'Die set was zo vies dat OnlyFans geïnteresseerd is. 💸',
-    'Je pompt de grond alsof het je ex-schoonmoeder is. 👵',
-    'Zo hard dat God zelf even een pauze neemt. ⛪',
-    'Je testosteron heeft een eigen Wikipedia-pagina. 📚',
-    'Die push-ups waren zo agressief, de vloer heeft PTSD. 🪖',
-    'Meer gains dan een beurshandelaar op coke. 📈',
-    'Je bent zo sterk dat je scheten bulldozers wegblazen. 💨',
-    'Dit was geen workout, dit was een oorlogsmisdaad tegen de zwaartekracht. ⚖️',
-    'Je bent harder dan een nonnenklooster op een vrijdagavond. ⛪',
-    'Shit, ik krijg een stijve van je vormbehoud. 📏',
-    'Zo gespierd dat zelfs je schaduw een sixpack heeft. 🌑',
-    'Die push-ups waren sneller dan je vader toen hij de melk ging halen. 🥛',
-    'Je armen hebben meer definitie dan een woordenboek. 📖',
-    'Fucking hardcore, zelfs Satan vraagt om autograph. ✍️',
-    'Je bent zo beast dat dierenrechten-activisten je willen redden. 🐾',
-    'Die vloer heeft meer klappen gehad dan je ego na een Tinder-swipe. 📱',
-    'Pompen als een boormachine bij de buurvrouw. 🔧',
-    'Je bent harder dan de realiteit op maandagochtend. ☕',
-    'Zo strak dat je broek om genade smeekt. 👖',
-    'Meer power dan een politicus met een geheim bankrekening. 💰',
-    'Je kreunt harder dan de hele buurt bij een stroomuitval. 🔊',
-    'Die push-ups zagen er uit alsof ze betaald werden. 💵',
-    'Zo fit dat je sperma protein shakes drinkt. 🥤',
-    'Je armen zijn dikker dan het strafregister van je oom. 👮',
-    'Godverdomme, dat was pornografisch goed. 🎬',
-    'Je bent zo sterk dat condooms spontaan scheuren van ontzag. 🎈',
-    'Die set was ruwer dan een eerste keer zonder glijmiddel. 😬',
-    'Meer reps dan de gemiddelde politicus leugens per dag. 🗳️',
-    'Je bent een wandelend testosteron-misdrijf. 🚔',
-    'Die laatste rep had meer overtuiging dan je huwelijksgeloftes. 💍',
-    'Zo hard dat je spierpijn spierpijn krijgt. 🤕',
-    'Fucking sloophamer van een mens ben jij. 🔨',
-  ];
-
-  function showGimmick() {
-    const el = document.getElementById('gimmick');
-    el.textContent = GIMMICKS[Math.floor(Math.random() * GIMMICKS.length)];
-    el.classList.remove('hidden');
-    // restart animation
-    el.style.animation = 'none';
-    el.offsetHeight;
-    el.style.animation = '';
-    setTimeout(() => el.classList.add('hidden'), 6000);
-  }
-
   async function init() {
-    // Register service worker for PWA + push
     if ('serviceWorker' in navigator) {
       try {
         swRegistration = await navigator.serviceWorker.register('/sw.js');
@@ -174,7 +22,6 @@
       }
     }
 
-    // Resolve own name from code
     if (code) {
       const meRes = await fetch('/api/me', {
         headers: { 'X-Participant-Code': code },
@@ -186,14 +33,13 @@
     }
     setupNotifications();
     loadProgress();
-    // Light polling for UI refresh (every 60s)
     setInterval(loadProgress, 60000);
   }
 
   function setupNotifications() {
     const btn = document.getElementById('notify-btn');
     if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return;
-    if (!code) return; // Need login to subscribe
+    if (!code) return;
     btn.classList.remove('hidden');
     updateNotifyBtn();
     btn.addEventListener('click', async () => {
@@ -208,8 +54,6 @@
       await subscribeToPush();
       updateNotifyBtn();
     });
-
-    // Auto-subscribe if already granted
     if (Notification.permission === 'granted') {
       subscribeToPush().catch(err => console.error('Subscribe failed:', err));
     }
@@ -219,7 +63,6 @@
     if (!swRegistration) return;
     const keyRes = await fetch('/api/push/key');
     const { publicKey } = await keyRes.json();
-
     let subscription = await swRegistration.pushManager.getSubscription();
     if (!subscription) {
       subscription = await swRegistration.pushManager.subscribe({
@@ -227,13 +70,9 @@
         applicationServerKey: urlBase64ToUint8Array(publicKey),
       });
     }
-
     await fetch('/api/push/subscribe', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Participant-Code': code,
-      },
+      headers: { 'Content-Type': 'application/json', 'X-Participant-Code': code },
       body: JSON.stringify({ subscription }),
     });
   }
@@ -261,13 +100,13 @@
     const data = await res.json();
     latestData = data;
     renderBadge(myName);
-    renderCheckin(data, myName);
+    renderDayView();
     renderTable(data);
   }
 
-  function hasCheckin(day) {
-    if (!latestData || !myName) return false;
-    return latestData.checkins.some(c => c.name === myName && c.day === day);
+  function getMyCheckin(day) {
+    if (!latestData || !myName) return null;
+    return latestData.checkins.find(c => c.name === myName && c.day === day) || null;
   }
 
   function renderBadge(name) {
@@ -277,9 +116,36 @@
     badge.classList.remove('hidden');
   }
 
+  /**
+   * Decide what to show in the check-in/gimmick area:
+   * - Past day selected + done → show stored gimmick (with back button)
+   * - Past day selected + not done → show check-in form for that day
+   * - No selection (default) → today: show gimmick if done, else form
+   */
+  function renderDayView() {
+    const checkinSection = document.getElementById('checkin-section');
+    const gimmickEl = document.getElementById('gimmick');
+    if (!myName || !latestData) {
+      checkinSection.classList.add('hidden');
+      gimmickEl.classList.add('hidden');
+      return;
+    }
+
+    const today = latestData.today;
+    const day = selectedDay ?? today;
+    const mine = getMyCheckin(day);
+
+    if (mine) {
+      checkinSection.classList.add('hidden');
+      showGimmickView(day, mine.gimmickText, mine.gimmickVideo, day !== today);
+    } else {
+      gimmickEl.classList.add('hidden');
+      showCheckinForm(day, day === today);
+    }
+  }
+
   function showCheckinForm(day, isToday) {
     const section = document.getElementById('checkin-section');
-    selectedDay = day;
     document.getElementById('checkin-label').textContent =
       isToday ? `Vandaag \u2014 Dag ${day}` : `Inhalen \u2014 Dag ${day}`;
     document.getElementById('checkin-day').textContent =
@@ -288,24 +154,41 @@
     bindCheckinBtn();
   }
 
-  function renderCheckin(data, name) {
-    const section = document.getElementById('checkin-section');
-    if (!name) return;
-    // If a past day is selected for backfill, keep that view
-    if (selectedDay !== null && selectedDay !== data.today) {
-      if (hasCheckin(selectedDay)) {
+  function showGimmickView(day, text, videoId, showBack) {
+    const el = document.getElementById('gimmick');
+    const isToday = latestData && day === latestData.today;
+    const label = isToday ? `Vandaag \u2014 Dag ${day}` : `Dag ${day}`;
+    const safeText = text ? escapeHtml(text) : 'Gehaald! 💪';
+    const videoHtml = videoId
+      ? `<div class="gimmick-video"><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}" title="YouTube video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`
+      : '';
+    const backHtml = showBack
+      ? `<button type="button" class="gimmick-back" id="gimmick-back-btn">\u2190 Terug naar vandaag</button>`
+      : '';
+    el.innerHTML = `
+      <div class="gimmick-label">${label} \u2014 Gehaald ✅</div>
+      <div class="gimmick-text">${safeText}</div>
+      ${videoHtml}
+      ${backHtml}
+    `;
+    el.classList.remove('hidden');
+    el.style.animation = 'none';
+    // eslint-disable-next-line no-unused-expressions
+    el.offsetHeight;
+    el.style.animation = '';
+
+    if (showBack) {
+      document.getElementById('gimmick-back-btn').addEventListener('click', () => {
         selectedDay = null;
-        section.classList.add('hidden');
-      }
-      return;
+        renderDayView();
+      });
     }
-    const today = data.today;
-    if (hasCheckin(today)) {
-      selectedDay = null;
-      section.classList.add('hidden');
-      return;
-    }
-    showCheckinForm(today, true);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[c]));
   }
 
   function bindCheckinBtn() {
@@ -313,12 +196,13 @@
     checkinBtnBound = true;
     const btn = document.getElementById('checkin-btn');
     const input = document.getElementById('sets-input');
-    const section = document.getElementById('checkin-section');
 
     btn.addEventListener('click', async () => {
       const sets = parseInt(input.value, 10);
       if (!sets || sets < 1) return;
-      if (selectedDay === null) return;
+      const today = latestData ? latestData.today : null;
+      const day = selectedDay ?? today;
+      if (day === null) return;
 
       btn.disabled = true;
       const originalText = btn.textContent;
@@ -326,21 +210,19 @@
 
       const res = await fetch('/api/checkin', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Participant-Code': code,
-        },
-        body: JSON.stringify({ sets, day: selectedDay }),
+        headers: { 'Content-Type': 'application/json', 'X-Participant-Code': code },
+        body: JSON.stringify({ sets, day }),
       });
 
       btn.disabled = false;
       btn.textContent = originalText;
 
       if (res.ok) {
+        // After submission, go back to default view (today). renderDayView
+        // will show today's gimmick if the submitted day was today, or the
+        // form for today if the submission was a backfill.
         selectedDay = null;
-        section.classList.add('hidden');
-        showGimmick();
-        loadProgress();
+        await loadProgress();
       } else {
         const err = await res.json();
         alert(err.error || 'Er ging iets mis');
@@ -352,7 +234,6 @@
     const head = document.getElementById('progress-head');
     const body = document.getElementById('progress-body');
 
-    // Build header
     const headerRow = document.createElement('tr');
     headerRow.innerHTML = '<th>Dag</th>';
     data.participants.forEach(name => {
@@ -363,42 +244,44 @@
     head.innerHTML = '';
     head.appendChild(headerRow);
 
-    // Build checkin lookup: { "name:day": sets }
+    // Lookup by "name:day" → checkin object (not just sets)
     const lookup = {};
     data.checkins.forEach(c => {
-      lookup[`${c.name}:${c.day}`] = c.sets;
+      lookup[`${c.name}:${c.day}`] = c;
     });
 
-    // Build rows (newest day first)
     body.innerHTML = '';
     for (let day = data.today; day >= 1; day--) {
       const tr = document.createElement('tr');
       if (day === data.today) tr.classList.add('day-today');
 
-      // Day label
       const dayTd = document.createElement('td');
       dayTd.innerHTML = `<span class="day-num">Dag ${day}</span>${day === data.today ? '<span class="today-label">vandaag</span>' : ''}`;
       tr.appendChild(dayTd);
 
-      // Each participant
       data.participants.forEach(name => {
         const td = document.createElement('td');
         const key = `${name}:${day}`;
-        if (lookup[key] !== undefined) {
-          td.innerHTML = `<span class="cell-done">\u2713</span> <span class="cell-sets">${lookup[key]}s</span>`;
+        const entry = lookup[key];
+        if (entry) {
+          td.innerHTML = `<span class="cell-done">\u2713</span> <span class="cell-sets">${entry.sets}s</span>`;
         } else if (day < data.today) {
           td.innerHTML = '<span class="cell-missed">\u2717</span>';
         } else {
           td.innerHTML = '<span class="cell-pending">\u2014</span>';
         }
-        // Make own cells clickable for backfill (today or past days, only if not done)
-        if (name === myName && lookup[key] === undefined) {
+        // Own cells are clickable: either backfill (not done) or re-view gimmick (done)
+        if (name === myName) {
           td.classList.add('cell-clickable');
-          td.title = `Inchecken voor dag ${day}`;
+          td.title = entry ? `Bekijk dag ${day}` : `Inchecken voor dag ${day}`;
           td.addEventListener('click', () => {
-            showCheckinForm(day, day === latestData.today);
-            document.getElementById('checkin-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
-            document.getElementById('sets-input').focus();
+            selectedDay = day === data.today ? null : day;
+            renderDayView();
+            const target = entry
+              ? document.getElementById('gimmick')
+              : document.getElementById('checkin-section');
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            if (!entry) document.getElementById('sets-input').focus();
           });
         }
         tr.appendChild(td);

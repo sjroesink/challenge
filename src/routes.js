@@ -1,6 +1,7 @@
 import { getCurrentDay } from './day.js';
-import { getAllCheckins, getCheckin, insertCheckin, upsertSubscription } from './db.js';
+import { getAllCheckins, getCheckin, insertCheckin, getUsedGimmicks, upsertSubscription } from './db.js';
 import { getPublicKey, notifyAllExcept } from './push.js';
+import { pickGimmick } from './gimmicks.js';
 
 function registerRoutes(app, participants) {
   const codeSet = new Set(participants.map(p => p.code));
@@ -14,6 +15,8 @@ function registerRoutes(app, participants) {
       name: codeToName[c.code],
       day: c.day,
       sets: c.sets,
+      gimmickText: c.gimmick_text,
+      gimmickVideo: c.gimmick_video,
     }));
     return {
       participants: participants.map(p => p.name),
@@ -54,7 +57,10 @@ function registerRoutes(app, participants) {
       return reply.status(409).send({ error: 'Already checked in for this day' });
     }
 
-    insertCheckin(code, day, sets);
+    const used = getUsedGimmicks();
+    const { text: gimmickText, video: gimmickVideo } = pickGimmick(used.texts, used.videos);
+
+    insertCheckin(code, day, sets, gimmickText, gimmickVideo);
 
     // Send push notification to others if checking in for today
     if (day === today) {
@@ -64,7 +70,7 @@ function registerRoutes(app, participants) {
       }).catch(err => console.error('Notify failed:', err));
     }
 
-    return { success: true, day, sets };
+    return { success: true, day, sets, gimmickText, gimmickVideo };
   });
 
   // Web Push endpoints

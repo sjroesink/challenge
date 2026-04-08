@@ -30,21 +30,40 @@ function getDb() {
     );
   `);
 
+  // Migrations: add gimmick columns if missing
+  const cols = db.prepare(`PRAGMA table_info(checkins)`).all().map(c => c.name);
+  if (!cols.includes('gimmick_text')) {
+    db.exec(`ALTER TABLE checkins ADD COLUMN gimmick_text TEXT`);
+  }
+  if (!cols.includes('gimmick_video')) {
+    db.exec(`ALTER TABLE checkins ADD COLUMN gimmick_video TEXT`);
+  }
+
   return db;
 }
 
 function getAllCheckins() {
-  return getDb().prepare('SELECT code, day, sets, checked_at FROM checkins ORDER BY day DESC').all();
+  return getDb().prepare('SELECT code, day, sets, checked_at, gimmick_text, gimmick_video FROM checkins ORDER BY day DESC').all();
 }
 
 function getCheckin(code, day) {
-  return getDb().prepare('SELECT code, day, sets, checked_at FROM checkins WHERE code = ? AND day = ?').get(code, day);
+  return getDb().prepare('SELECT code, day, sets, checked_at, gimmick_text, gimmick_video FROM checkins WHERE code = ? AND day = ?').get(code, day);
 }
 
-function insertCheckin(code, day, sets) {
+function insertCheckin(code, day, sets, gimmickText, gimmickVideo) {
   const checked_at = new Date().toISOString();
-  getDb().prepare('INSERT INTO checkins (code, day, sets, checked_at) VALUES (?, ?, ?, ?)').run(code, day, sets, checked_at);
-  return { code, day, sets, checked_at };
+  getDb().prepare(
+    'INSERT INTO checkins (code, day, sets, checked_at, gimmick_text, gimmick_video) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(code, day, sets, checked_at, gimmickText, gimmickVideo);
+  return { code, day, sets, checked_at, gimmick_text: gimmickText, gimmick_video: gimmickVideo };
+}
+
+function getUsedGimmicks() {
+  const rows = getDb().prepare('SELECT gimmick_text, gimmick_video FROM checkins WHERE gimmick_text IS NOT NULL').all();
+  return {
+    texts: rows.map(r => r.gimmick_text).filter(Boolean),
+    videos: rows.map(r => r.gimmick_video).filter(Boolean),
+  };
 }
 
 function getAllSubscriptions() {
@@ -72,4 +91,4 @@ function closeDb() {
   }
 }
 
-export { getDb, getAllCheckins, getCheckin, insertCheckin, getAllSubscriptions, upsertSubscription, deleteSubscription, closeDb };
+export { getDb, getAllCheckins, getCheckin, insertCheckin, getUsedGimmicks, getAllSubscriptions, upsertSubscription, deleteSubscription, closeDb };

@@ -1,0 +1,192 @@
+// Static pools of gimmick texts and YouTube videos.
+// Picked on check-in; preference for entries not yet shown in any prior check-in.
+
+export const TEXTS = [
+  'Beast mode geactiveerd! 💪',
+  'Je armen huilen, maar van geluk. 😭💪',
+  'Arnold Schwarzenegger is jaloers. 🏋️',
+  'Nog een dag, nog een stapje dichter bij Hulk. 💚',
+  'Push-up kampioen van de dag! 🏆',
+  'Je borstspieren sturen hun dank. ❤️',
+  'Dat was indrukwekkend, zelfs de grond is onder de indruk. 🌍',
+  'Weer een dag niet opgegeven. Legend! 🔥',
+  'Je lichaam: "dankjewel". Je geest: "nog één!" 🧠',
+  'Ondertussen zit de bank te huilen. 🛋️😢',
+  'Plank? Push-up? Gewoon lekker bezig! ⚡',
+  'De zwaartekracht heeft vandaag verloren. 🌌',
+  'Dit is hoe superhelden ontstaan. 🦸',
+  'Chuck Norris knikt goedkeurend. 👊',
+  'Spieren laden... 100% voltooid. 💪✨',
+  'Jij > gisteren. Elke dag. 📈',
+  'Kracht is een gewoonte. En jij bent consistent. 🎯',
+  'Nog zo\'n dag en de vloer geeft zich over. 🏳️',
+  'Je triceps hebben net een applausje gegeven. 👏',
+  'Dit is geen push-up, dit is een statement. 📢',
+  'Zweet = vloeibare trots. 💧',
+  'De spiegel gaat straks knipogen. 😉',
+  'Je bent letterlijk sterker dan gisteren. 📊',
+  'Rocky Balboa zet zijn muts voor je af. 🥊',
+  'Push-up fairy heeft je gezegend. 🧚',
+  'Je ademhaling zegt "kom maar op". 🌬️',
+  'De zwaartekracht had vandaag vrij genomen. Mislukt. 😤',
+  'Elke rep telt. En jij telt door. 🔢',
+  'Je schouders dragen nu officieel de wereld. 🌍',
+  'Vandaag niet geskipt. Morgen ook niet. 🚀',
+  'De challenge buigt voor jou, niet andersom. 🙇',
+  'Stoere beer-energie gedetecteerd. 🐻',
+  'Je lichaam is een tempel. Vandaag heb je gebeden. 🛕',
+  'Push-ups: cheaper than therapy, just as effective. 🧘',
+  'Dit was zo soepel, het leek wel een dans. 💃',
+  'Je hartslag doet een vreugdedansje. 💓',
+  'Iemand moet de legende zijn. Waarom jij niet? ✨',
+  'Gainz unlocked. 🔓',
+  'Je borstkas stuurt liefdesbrieven naar je armen. 💌',
+  'Dat was zó goed, de tijd ging even langzamer. ⏳',
+  'Spieren? Check. Discipline? Check. Held? Check. ✅',
+  'De couch potato-versie van jou huilt van jaloezie. 🥔😭',
+  'Respect van alle vier de muren. 🧱',
+  'Je bent nu 1% dichter bij Thor. ⚡',
+  'Kleine stappen, grote gains. 👣',
+  'Je energielevels gaan door het dak. 🏠⬆️',
+  'Elke push-up is een middelvinger naar opgeven. 🖕',
+  'Vandaag was die dag. En jij was er klaar voor. 🌟',
+  'Dit telt als cardio, kracht én karakter. 💯',
+  'Je spieren fluisteren: "doe maar weer". 🤫',
+  'Jij bent het goede voorbeeld waar mensen over praten. 🗣️',
+  'Geen excuses. Alleen resultaten. 🎖️',
+  'De push-up goden glimlachen vandaag. ☀️',
+  'Alsof je push-ups at voor ontbijt. 🥞',
+  'Je bent een wandelend motivatieposter. 📜',
+  'Ja, die biceps zag ik echt. 👀',
+  'Deze dag is afgevinkt. Boom. 💥',
+  'Godverdomme, wat een beest ben jij. 🔥',
+  'Je bent harder dan de lul van een bronstige stier. 🐂',
+  'Die push-ups hadden geen schijn van kans, klootzak. 💀',
+  'Shit, zelfs je zweet heeft spieren. 💦',
+  'Fuck yeah, dat was pure rauwe kracht. 🤘',
+  'Je bent zo sterk, de vloer vraagt om genade. 🙏',
+  'Badass move, motherfucker. 😎',
+  'Kanker sterk, gast. En dat is een compliment. 💪',
+  'De grond likt je schoenen na die set. 👟',
+  'Jezus christus, wie heeft jou losgelaten? ⛓️',
+  'Zo hard dat je buurman spontaan zwanger wordt. 🤰',
+  'Dat was meer bench dan een Ikea-showroom. 🛋️',
+  'Je testosteron lekt uit het scherm. 🧪',
+  'Alpha energy. Pure, ongefilterde alpha energy. 🐺',
+  'Klotezooi wat ben jij een machine. 🤖',
+  'Die push-ups zijn gesloopt zoals een ex-relatie. 💔',
+  'Holy shit, de vloer heeft een kreukel. 😱',
+  'Je bent zo hard, diamanten zijn jaloers. 💎',
+  'Gast, zelfs Satan doet een stapje terug. 😈',
+  'Fucking hell, wat een power move. ⚡',
+  'Die was zo goed, ik krijg er kippenvel van. En ik ben code. 🥶',
+  'Shredded als een document in een advocatenkantoor. 📄',
+  'Je bent harder dan mijn wiskunde-examen. 📐',
+  'Bruut. Pure bruut. Geen ander woord voor. 🦍',
+  'Die push-ups smeekten om hun mama. 👶',
+  'Verdomme, dat was sexy sterk. 🥵',
+  'Je bent zo ripped, kleding huilt om bij je te horen. 👕',
+  'Fuck cardio, dit is een executie. ☠️',
+  'Beest van een mens. Mens van een beest. 🐺',
+  'Die laatste rep was meer dan mijn hele jaar aan sport. 😅',
+  'Kankerhard, en daar mag je trots op zijn. 🏅',
+  'Je biceps hebben een eigen postcode. 📮',
+  'Dat was geen push-up, dat was dominantie. 👑',
+  'Godverju, wat een power. ⚡',
+  'Zo sterk dat de zwaartekracht zich verontschuldigt. 🌌',
+  'Je bent een lopende waarschuwing voor zwakkelingen. ⚠️',
+  'Shit man, ik krijg spierpijn van kijken. 👁️',
+  'Die set was vuiler dan een kroeg-wc. 🚽',
+  'Je spieren hebben hun eigen zwaartekrachtsveld. 🪐',
+  'Fucking legend. En dat weet je zelf ook. 🏆',
+  'Je pompt harder dan een tiener met zijn eerste Pornhub-account. 🍆',
+  'Die vloer is vaker geneukt dan je ex. En harder. 🛏️',
+  'Zo strak dat je spieren door je shirt willen breken om hallo te zeggen. 👋',
+  'Je zweet ruikt naar overwinning en slechte beslissingen. 💦',
+  'Harder dan de ochtendlat van een twintiger. 🌅',
+  'Die push-ups waren intiemer dan je laatste date. 💋',
+  'Je bent zo ripped dat vrouwen zwanger worden van een blik alleen. 👀',
+  'Fuck, je armen zijn dikker dan het IQ van je baas. 🧠',
+  'Die set was zo vies dat OnlyFans geïnteresseerd is. 💸',
+  'Je pompt de grond alsof het je ex-schoonmoeder is. 👵',
+  'Zo hard dat God zelf even een pauze neemt. ⛪',
+  'Je testosteron heeft een eigen Wikipedia-pagina. 📚',
+  'Die push-ups waren zo agressief, de vloer heeft PTSD. 🪖',
+  'Meer gains dan een beurshandelaar op coke. 📈',
+  'Je bent zo sterk dat je scheten bulldozers wegblazen. 💨',
+  'Dit was geen workout, dit was een oorlogsmisdaad tegen de zwaartekracht. ⚖️',
+  'Je bent harder dan een nonnenklooster op een vrijdagavond. ⛪',
+  'Shit, ik krijg een stijve van je vormbehoud. 📏',
+  'Zo gespierd dat zelfs je schaduw een sixpack heeft. 🌑',
+  'Die push-ups waren sneller dan je vader toen hij de melk ging halen. 🥛',
+  'Je armen hebben meer definitie dan een woordenboek. 📖',
+  'Fucking hardcore, zelfs Satan vraagt om autograph. ✍️',
+  'Je bent zo beast dat dierenrechten-activisten je willen redden. 🐾',
+  'Die vloer heeft meer klappen gehad dan je ego na een Tinder-swipe. 📱',
+  'Pompen als een boormachine bij de buurvrouw. 🔧',
+  'Je bent harder dan de realiteit op maandagochtend. ☕',
+  'Zo strak dat je broek om genade smeekt. 👖',
+  'Meer power dan een politicus met een geheim bankrekening. 💰',
+  'Je kreunt harder dan de hele buurt bij een stroomuitval. 🔊',
+  'Die push-ups zagen er uit alsof ze betaald werden. 💵',
+  'Zo fit dat je sperma protein shakes drinkt. 🥤',
+  'Je armen zijn dikker dan het strafregister van je oom. 👮',
+  'Godverdomme, dat was pornografisch goed. 🎬',
+  'Je bent zo sterk dat condooms spontaan scheuren van ontzag. 🎈',
+  'Die set was ruwer dan een eerste keer zonder glijmiddel. 😬',
+  'Meer reps dan de gemiddelde politicus leugens per dag. 🗳️',
+  'Je bent een wandelend testosteron-misdrijf. 🚔',
+  'Die laatste rep had meer overtuiging dan je huwelijksgeloftes. 💍',
+  'Zo hard dat je spierpijn spierpijn krijgt. 🤕',
+  'Fucking sloophamer van een mens ben jij. 🔨',
+];
+
+// YouTube video IDs — short funny / hype clips
+export const VIDEOS = [
+  'dQw4w9WgXcQ', // Rick Astley - Never Gonna Give You Up
+  'ZZ5LpwO-An4', // HEYYEYAAEYAAAEYAEYAA
+  'y6120QOlsfU', // Darude - Sandstorm
+  '9bZkp7q19f0', // Gangnam Style
+  'kfVsfOSbJY0', // Rick Roll extended
+  'L_jWHffIx5E', // Smash Mouth - All Star
+  'otCpCn0l4Wo', // HEY! Yeah Yeah Yeah
+  'djV11Xbc914', // a-ha - Take On Me
+  'fC7oUOUEEi4', // Eye of the Tiger
+  'btPJPFnesV4', // Surprise motherfucker
+  'Cl_XAGqLqdM', // Rocky training
+  'aJcpkKcsr8g', // Heyyeyaaeyaaaeyaeyaa meme
+  'CH1XGdu-hzQ', // It's over 9000!
+  'FHG2oizTlpY', // Men Without Hats - Safety Dance
+  'ru0K8uYEZWw', // Surprised Pikachu theme
+  'EYu9e7GrFg0', // Crazy frog
+  'lj-ldKkGk-Y', // Push it
+  'ACWlr4QmTkE', // Eye of the Tiger ultimate
+  '5xGZ6F1nKhk', // C+C Music Factory - Everybody Dance Now
+  'SRvCvsRp5ho', // Thunderstruck
+  'v2AC41dglnM', // AC/DC - Thunderstruck
+  'pAgnJDJN4VA', // Africa - Toto
+  'hTWKbfoikeg', // Smells Like Teen Spirit
+  'ktvTqknDobU', // Imagine Dragons - Radioactive
+  'fJ9rUzIMcZQ', // Queen - Bohemian Rhapsody
+  '1w7OgIMMRc4', // GnR - Sweet Child
+  'WM8bTdBs-cw', // Linkin Park - What I've Done
+  'eVTXPUF4Oz4', // Linkin Park - In The End
+  'hFDcoX7s6rE', // Europe - Final Countdown
+  'OMOGaugKpzs', // Pump it - Black Eyed Peas
+];
+
+/**
+ * Pick a text and video, preferring entries not already in usedTexts/usedVideos.
+ * Falls back to random from the full pool if all have been used.
+ */
+export function pickGimmick(usedTexts, usedVideos) {
+  const usedT = new Set(usedTexts);
+  const usedV = new Set(usedVideos);
+  const freshT = TEXTS.filter(t => !usedT.has(t));
+  const freshV = VIDEOS.filter(v => !usedV.has(v));
+  const textPool = freshT.length ? freshT : TEXTS;
+  const videoPool = freshV.length ? freshV : VIDEOS;
+  const text = textPool[Math.floor(Math.random() * textPool.length)];
+  const video = videoPool[Math.floor(Math.random() * videoPool.length)];
+  return { text, video };
+}
