@@ -281,3 +281,28 @@ tbody td:first-child {
 .cell-pending { color: var(--text-dimmer); }
 
 .hidden { display: none !important; }
+
+.gimmick {
+  margin: 0 0 20px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #14532d 0%, #052e16 100%);
+  border: 1px solid #22c55e55;
+  border-radius: 12px;
+  color: #d1fae5;
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  animation: pop 0.4s ease-out;
+}
+
+@media (prefers-color-scheme: light) {
+  .gimmick {
+    background: linear-gradient(135deg, #dcfce7 0%, #f0fdf4 100%);
+    color: #14532d;
+  }
+}
+
+@keyframes pop {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
