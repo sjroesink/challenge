@@ -165,6 +165,11 @@ export const VIDEOS = [
   'ydmPh4MXT3g',
   '4r7wHMg5Yjg',
   'b9mtM0uIQ9Q',
+  'Jo6fKboqfMs',
+  '7g5hz48Dpi4',
+  'WTzH1dDn3OA',
+  'QksqWRqEfy0',
+  'w58BPcLeGt4',
 ];
 
 /**
