@@ -170,6 +170,10 @@ export const VIDEOS = [
   'WTzH1dDn3OA',
   'QksqWRqEfy0',
   'w58BPcLeGt4',
+  'PY9fy9hZXAI',
+  'f_ekZP975iM',
+  'st8-EY71K84',
+  'bl8Z7Dl7P9A',
 ];
 
 /**
