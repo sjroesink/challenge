@@ -1,7 +1,27 @@
 import { getCurrentDay } from './day.js';
-import { getAllCheckins, getCheckin, insertCheckin, getUsedGimmicks, upsertSubscription } from './db.js';
+import { getAllCheckins, getCheckin, insertCheckin, getUsedGimmicks, upsertSubscription, insertMotionRecording } from './db.js';
 import { getPublicKey, notifyAllExcept } from './push.js';
 import { pickGimmick } from './gimmicks.js';
+import { analyzeMotion } from './motionAnalysis.js';
+
+// Validate the motion payload shape sent by the browser. We don't trust
+// anything: arrays must exist, all be the same length, and within sane bounds.
+function validateMotion(motion) {
+  if (motion == null) return null;
+  if (typeof motion !== 'object') return 'motion must be an object';
+  const { t, ax, ay, az, lax, lay, laz, rx, ry, rz } = motion;
+  const arrays = { t, ax, ay, az, lax, lay, laz, rx, ry, rz };
+  for (const [key, arr] of Object.entries(arrays)) {
+    if (!Array.isArray(arr)) return `motion.${key} must be an array`;
+  }
+  const n = t.length;
+  if (n === 0) return 'motion has no samples';
+  if (n > 200000) return 'motion has too many samples';
+  for (const [key, arr] of Object.entries(arrays)) {
+    if (arr.length !== n) return `motion.${key} length mismatch`;
+  }
+  return null;
+}
 
 function registerRoutes(app, participants) {
   const codeSet = new Set(participants.map(p => p.code));
@@ -52,6 +72,12 @@ function registerRoutes(app, participants) {
       return reply.status(400).send({ error: 'Day must be between 1 and today' });
     }
 
+    const motion = request.body?.motion;
+    const motionError = validateMotion(motion);
+    if (motionError) {
+      return reply.status(400).send({ error: motionError });
+    }
+
     const existing = getCheckin(code, day);
     if (existing) {
       return reply.status(409).send({ error: 'Already checked in for this day' });
@@ -61,6 +87,21 @@ function registerRoutes(app, participants) {
     const { text: gimmickText, video: gimmickVideo } = pickGimmick(used.texts, used.videos);
 
     insertCheckin(code, day, sets, gimmickText, gimmickVideo);
+
+    if (motion) {
+      try {
+        const analysis = analyzeMotion(motion);
+        insertMotionRecording(code, day, {
+          durationMs: motion.durationMs ?? (motion.t.at(-1) - motion.t[0]),
+          sampleCount: motion.t.length,
+          rawData: motion,
+          analysis,
+        });
+      } catch (err) {
+        // Recording is best-effort — never let it block the check-in.
+        request.log.error({ err }, 'Motion analysis/insert failed');
+      }
+    }
 
     // Send push notification to others if checking in for today
     if (day === today) {

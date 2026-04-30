@@ -9,7 +9,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, '..', 'public');
 const participants = JSON.parse(readFileSync(join(__dirname, '..', 'participants.json'), 'utf-8'));
 
-const app = Fastify({ logger: true });
+// 8 MB body limit covers ~30 min of motion samples at native rate.
+const app = Fastify({ logger: true, bodyLimit: 8 * 1024 * 1024 });
 
 // Pre-load static files with cache-busting hashes
 const styleCss = readFileSync(join(publicDir, 'style.css'), 'utf-8');

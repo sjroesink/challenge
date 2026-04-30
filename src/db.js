@@ -28,6 +28,19 @@ function getDb() {
       subscription TEXT NOT NULL,
       created_at TEXT NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS motion_recordings (
+      code TEXT NOT NULL,
+      day INTEGER NOT NULL,
+      recorded_at TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL,
+      sample_count INTEGER NOT NULL,
+      raw_data TEXT NOT NULL,
+      analyzed_pushups INTEGER,
+      analyzed_sets INTEGER,
+      analysis_meta TEXT,
+      PRIMARY KEY (code, day),
+      FOREIGN KEY (code, day) REFERENCES checkins(code, day) ON DELETE CASCADE
+    );
   `);
 
   // Migrations: add gimmick columns if missing
@@ -84,6 +97,31 @@ function deleteSubscription(endpoint) {
   getDb().prepare('DELETE FROM push_subscriptions WHERE endpoint = ?').run(endpoint);
 }
 
+function insertMotionRecording(code, day, recording) {
+  const recorded_at = new Date().toISOString();
+  getDb().prepare(`
+    INSERT INTO motion_recordings
+      (code, day, recorded_at, duration_ms, sample_count, raw_data, analyzed_pushups, analyzed_sets, analysis_meta)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    code,
+    day,
+    recorded_at,
+    recording.durationMs,
+    recording.sampleCount,
+    JSON.stringify(recording.rawData),
+    recording.analysis?.pushups ?? null,
+    recording.analysis?.sets ?? null,
+    recording.analysis ? JSON.stringify(recording.analysis) : null,
+  );
+}
+
+function getMotionRecording(code, day) {
+  return getDb().prepare(
+    'SELECT code, day, recorded_at, duration_ms, sample_count, analyzed_pushups, analyzed_sets, analysis_meta FROM motion_recordings WHERE code = ? AND day = ?'
+  ).get(code, day);
+}
+
 function closeDb() {
   if (db) {
     db.close();
@@ -91,4 +129,16 @@ function closeDb() {
   }
 }
 
-export { getDb, getAllCheckins, getCheckin, insertCheckin, getUsedGimmicks, getAllSubscriptions, upsertSubscription, deleteSubscription, closeDb };
+export {
+  getDb,
+  getAllCheckins,
+  getCheckin,
+  insertCheckin,
+  getUsedGimmicks,
+  getAllSubscriptions,
+  upsertSubscription,
+  deleteSubscription,
+  insertMotionRecording,
+  getMotionRecording,
+  closeDb,
+};

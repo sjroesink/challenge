@@ -202,6 +202,60 @@ header h1 {
 .btn-checkin:hover { filter: brightness(1.1); }
 .btn-checkin:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* ── Record button ── */
+.record-area {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--input-border);
+}
+
+.btn-record {
+  background: var(--bg-elevated);
+  color: var(--text-body);
+  border: 1px solid var(--input-border-strong);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.btn-record:hover { filter: brightness(1.15); }
+.btn-record:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.btn-record.recording {
+  background: #7f1d1d;
+  border-color: #ef4444;
+  color: #fee2e2;
+  animation: rec-pulse 1.2s ease-in-out infinite;
+}
+
+.btn-record.captured {
+  background: #14532d;
+  border-color: #22c55e;
+  color: #d1fae5;
+}
+
+.record-status {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.record-status.error { color: var(--danger); }
+
+@keyframes rec-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+  50%      { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
 /* ── Progress table ── */
 #progress-section {
   margin: 0 0 24px;

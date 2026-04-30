@@ -104,6 +104,54 @@ describe('API Routes', () => {
       });
       assert.equal(res.statusCode, 409);
     });
+
+    it('accepts checkin with motion payload and stores analysis', async () => {
+      const { getMotionRecording } = await import('../src/db.js');
+      const code = participants[1].code;
+      // Tiny synthetic motion: 30 samples of a sine on z-axis.
+      const t = [], ax = [], ay = [], az = [];
+      for (let i = 0; i < 30; i++) {
+        t.push(i * 16);
+        ax.push(0); ay.push(0);
+        az.push(9.8 + 4 * Math.sin(i * 0.4));
+      }
+      const zeros = () => new Array(30).fill(0);
+      const motion = {
+        t, ax, ay, az,
+        lax: zeros(), lay: zeros(), laz: zeros(),
+        rx: zeros(), ry: zeros(), rz: zeros(),
+        durationMs: 480, sampleCount: 30,
+      };
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/checkin',
+        headers: { 'x-participant-code': code },
+        payload: { sets: 4, motion }
+      });
+      assert.equal(res.statusCode, 200);
+      const stored = getMotionRecording(code, getCurrentDay());
+      assert.ok(stored, 'motion recording should be stored');
+      assert.equal(stored.sample_count, 30);
+      assert.ok(stored.analysis_meta, 'analysis_meta should be present');
+    });
+
+    it('rejects motion payload with mismatched array lengths', async () => {
+      // Validation runs before duplicate-check, so reusing an existing
+      // participant still surfaces the 400.
+      const code = participants[0].code;
+      const motion = {
+        t: [0, 16, 32], ax: [0, 0], ay: [0, 0, 0], az: [0, 0, 0],
+        lax: [0, 0, 0], lay: [0, 0, 0], laz: [0, 0, 0],
+        rx: [0, 0, 0], ry: [0, 0, 0], rz: [0, 0, 0],
+      };
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/checkin',
+        headers: { 'x-participant-code': code },
+        payload: { sets: 1, motion }
+      });
+      assert.equal(res.statusCode, 400);
+    });
   });
 
 });

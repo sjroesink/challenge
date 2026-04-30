@@ -13,6 +13,21 @@
   let latestData = null;
   let checkinBtnBound = false;
 
+  // ── Motion recording state ──
+  // 'unsupported' | 'idle' | 'recording' | 'captured'
+  let recordState = 'idle';
+  let recordBtnBound = false;
+  let motionPermissionGranted = false;
+  let motionListener = null;
+  let recordStartedAt = null;
+  let recordTimer = null;
+  let wakeLock = null;
+  // Buffers — parallel arrays for compactness on the wire.
+  let buf = null;
+  // Captured recording held in memory until check-in submit.
+  let capturedMotion = null;
+  const MAX_SAMPLES = 100000; // hard cap (~27 min @ 60 Hz)
+
   async function init() {
     if ('serviceWorker' in navigator) {
       try {
@@ -152,6 +167,8 @@
       `${day} push-up${day === 1 ? '' : 's'}`;
     section.classList.remove('hidden');
     bindCheckinBtn();
+    setupRecordControllerOnce();
+    updateRecordVisibility(isToday);
   }
 
   function showGimmickView(day, text, videoId, showBack) {
@@ -208,16 +225,19 @@
       const originalText = btn.textContent;
       btn.textContent = 'Bezig...';
 
+      const motion = getRecordingForSubmit();
+      const payload = motion ? { sets, day, motion } : { sets, day };
       const res = await fetch('/api/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Participant-Code': code },
-        body: JSON.stringify({ sets, day }),
+        body: JSON.stringify(payload),
       });
 
       btn.disabled = false;
       btn.textContent = originalText;
 
       if (res.ok) {
+        clearCapturedRecording();
         // After submission, go back to default view (today). renderDayView
         // will show today's gimmick if the submitted day was today, or the
         // form for today if the submission was a backfill.
@@ -228,6 +248,226 @@
         alert(err.error || 'Er ging iets mis');
       }
     });
+  }
+
+  // ─────────────────────────────────────────
+  // Motion recording controller
+  // ─────────────────────────────────────────
+
+  function setupRecordControllerOnce() {
+    if (recordBtnBound) return;
+    recordBtnBound = true;
+
+    if (typeof DeviceMotionEvent === 'undefined') {
+      recordState = 'unsupported';
+      return;
+    }
+
+    const btn = document.getElementById('record-btn');
+    btn.addEventListener('click', async () => {
+      if (recordState === 'idle') {
+        await beginRecording();
+      } else if (recordState === 'recording') {
+        finishRecording();
+      } else if (recordState === 'captured') {
+        // Re-record: discard previous capture and start a new one.
+        clearCapturedRecording();
+        await beginRecording();
+      }
+    });
+
+    renderRecordUI();
+  }
+
+  function updateRecordVisibility(isToday) {
+    const area = document.getElementById('record-area');
+    if (!area) return;
+    if (recordState === 'unsupported' || !isToday) {
+      area.classList.add('hidden');
+    } else {
+      area.classList.remove('hidden');
+    }
+  }
+
+  async function beginRecording() {
+    try {
+      // iOS 13+ requires explicit permission for DeviceMotion.
+      if (!motionPermissionGranted &&
+          typeof DeviceMotionEvent !== 'undefined' &&
+          typeof DeviceMotionEvent.requestPermission === 'function') {
+        const result = await DeviceMotionEvent.requestPermission();
+        if (result !== 'granted') {
+          showRecordError('Geen toestemming voor bewegingssensoren');
+          return;
+        }
+        motionPermissionGranted = true;
+      } else {
+        motionPermissionGranted = true;
+      }
+    } catch (err) {
+      showRecordError('Bewegingssensoren niet beschikbaar');
+      return;
+    }
+
+    buf = { t: [], ax: [], ay: [], az: [], lax: [], lay: [], laz: [], rx: [], ry: [], rz: [] };
+    recordStartedAt = performance.now();
+    motionListener = (e) => {
+      if (buf.t.length >= MAX_SAMPLES) {
+        finishRecording();
+        return;
+      }
+      const t = Math.round(performance.now() - recordStartedAt);
+      const ag = e.accelerationIncludingGravity || {};
+      const a = e.acceleration || {};
+      const r = e.rotationRate || {};
+      buf.t.push(t);
+      buf.ax.push(ag.x ?? 0);
+      buf.ay.push(ag.y ?? 0);
+      buf.az.push(ag.z ?? 0);
+      buf.lax.push(a.x ?? 0);
+      buf.lay.push(a.y ?? 0);
+      buf.laz.push(a.z ?? 0);
+      buf.rx.push(r.alpha ?? 0);
+      buf.ry.push(r.beta ?? 0);
+      buf.rz.push(r.gamma ?? 0);
+    };
+    window.addEventListener('devicemotion', motionListener);
+
+    recordState = 'recording';
+    requestWakeLock();
+    startRecordTimer();
+    renderRecordUI();
+  }
+
+  function finishRecording() {
+    if (recordState !== 'recording') return;
+    if (motionListener) {
+      window.removeEventListener('devicemotion', motionListener);
+      motionListener = null;
+    }
+    stopRecordTimer();
+    releaseWakeLock();
+
+    const durationMs = Math.max(0, Math.round(performance.now() - recordStartedAt));
+    const sampleCount = buf ? buf.t.length : 0;
+
+    if (!buf || sampleCount < 5) {
+      showRecordError('Geen bewegingsdata ontvangen — sensor toegang geweigerd?');
+      buf = null;
+      capturedMotion = null;
+      recordState = 'idle';
+      renderRecordUI();
+      return;
+    }
+
+    capturedMotion = {
+      ...roundMotion(buf),
+      durationMs,
+      sampleCount,
+      startedAt: new Date(Date.now() - durationMs).toISOString(),
+      userAgent: navigator.userAgent,
+    };
+    buf = null;
+    recordState = 'captured';
+    renderRecordUI();
+  }
+
+  function clearCapturedRecording() {
+    capturedMotion = null;
+    if (recordState === 'captured') recordState = 'idle';
+    renderRecordUI();
+  }
+
+  function getRecordingForSubmit() {
+    return capturedMotion;
+  }
+
+  // Round all sample arrays to 4 decimals — saves ~30% on JSON payload size
+  // without losing meaningful precision (sensor noise floor is well above 1e-4).
+  function roundMotion(b) {
+    const round = (arr) => arr.map(v => Math.round(v * 10000) / 10000);
+    return {
+      t: b.t,
+      ax: round(b.ax), ay: round(b.ay), az: round(b.az),
+      lax: round(b.lax), lay: round(b.lay), laz: round(b.laz),
+      rx: round(b.rx), ry: round(b.ry), rz: round(b.rz),
+    };
+  }
+
+  function startRecordTimer() {
+    stopRecordTimer();
+    recordTimer = setInterval(renderRecordUI, 250);
+  }
+
+  function stopRecordTimer() {
+    if (recordTimer) {
+      clearInterval(recordTimer);
+      recordTimer = null;
+    }
+  }
+
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch (err) {
+      // Non-fatal — recording still works.
+    }
+  }
+
+  function releaseWakeLock() {
+    if (wakeLock) {
+      wakeLock.release().catch(() => {});
+      wakeLock = null;
+    }
+  }
+
+  function formatDuration(ms) {
+    const s = Math.floor(ms / 1000);
+    const mm = String(Math.floor(s / 60)).padStart(2, '0');
+    const ss = String(s % 60).padStart(2, '0');
+    return `${mm}:${ss}`;
+  }
+
+  function showRecordError(message) {
+    const status = document.getElementById('record-status');
+    if (!status) return;
+    status.textContent = message;
+    status.classList.remove('hidden');
+    status.classList.add('error');
+  }
+
+  function renderRecordUI() {
+    const btn = document.getElementById('record-btn');
+    const status = document.getElementById('record-status');
+    if (!btn || !status) return;
+
+    btn.classList.remove('recording', 'captured');
+    status.classList.remove('error');
+
+    if (recordState === 'idle') {
+      btn.textContent = '🎙️ Opname starten';
+      btn.disabled = false;
+      status.classList.add('hidden');
+      status.textContent = '';
+    } else if (recordState === 'recording') {
+      const ms = performance.now() - recordStartedAt;
+      const samples = buf ? buf.t.length : 0;
+      btn.textContent = '⏹ Stop opname';
+      btn.classList.add('recording');
+      btn.disabled = false;
+      status.textContent = `${formatDuration(ms)} · ${samples} samples`;
+      status.classList.remove('hidden');
+    } else if (recordState === 'captured') {
+      const ms = capturedMotion?.durationMs ?? 0;
+      const samples = capturedMotion?.sampleCount ?? 0;
+      btn.textContent = '↺ Opnieuw opnemen';
+      btn.classList.add('captured');
+      btn.disabled = false;
+      status.textContent = `Opname klaar · ${formatDuration(ms)} · ${samples} samples`;
+      status.classList.remove('hidden');
+    }
   }
 
   function renderTable(data) {
