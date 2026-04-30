@@ -140,6 +140,8 @@
   function renderDayView() {
     const checkinSection = document.getElementById('checkin-section');
     const gimmickEl = document.getElementById('gimmick');
+    const motionEl = document.getElementById('motion-view');
+    motionEl.classList.add('hidden');
     if (!myName || !latestData) {
       checkinSection.classList.add('hidden');
       gimmickEl.classList.add('hidden');
@@ -504,17 +506,27 @@
         const key = `${name}:${day}`;
         const entry = lookup[key];
         if (entry) {
-          td.innerHTML = `<span class="cell-done">\u2713</span> <span class="cell-sets">${entry.sets}s</span>`;
+          const motionIcon = entry.hasMotion ? ' <span class="cell-motion" title="Beweging opgenomen">\ud83d\udcca</span>' : '';
+          td.innerHTML = `<span class="cell-done">\u2713</span> <span class="cell-sets">${entry.sets}s</span>${motionIcon}`;
         } else if (day < data.today) {
           td.innerHTML = '<span class="cell-missed">\u2717</span>';
         } else {
           td.innerHTML = '<span class="cell-pending">\u2014</span>';
         }
-        // Own cells are clickable: either backfill (not done) or re-view gimmick (done)
-        if (name === myName) {
+        // Own cells: backfill or re-view gimmick. Other cells: only clickable when they
+        // have a motion recording to show.
+        const isOwn = name === myName;
+        const isOtherWithMotion = !isOwn && entry && entry.hasMotion && myName;
+        if (isOwn) {
           td.classList.add('cell-clickable');
-          td.title = entry ? `Bekijk dag ${day}` : `Inchecken voor dag ${day}`;
+          td.title = entry
+            ? (entry.hasMotion ? `Bekijk dag ${day} + beweging` : `Bekijk dag ${day}`)
+            : `Inchecken voor dag ${day}`;
           td.addEventListener('click', () => {
+            if (entry && entry.hasMotion) {
+              showMotionView(name, day);
+              return;
+            }
             selectedDay = day === data.today ? null : day;
             renderDayView();
             const target = entry
@@ -523,12 +535,198 @@
             target.scrollIntoView({ behavior: 'smooth', block: 'center' });
             if (!entry) document.getElementById('sets-input').focus();
           });
+        } else if (isOtherWithMotion) {
+          td.classList.add('cell-clickable');
+          td.title = `Bekijk beweging van ${name} \u2014 dag ${day}`;
+          td.addEventListener('click', () => {
+            showMotionView(name, day);
+          });
         }
         tr.appendChild(td);
       });
 
       body.appendChild(tr);
     }
+  }
+
+  // ─────────────────────────────────────────
+  // Motion view (drill-in chart for any recording)
+  // ─────────────────────────────────────────
+
+  let plotlyPromise = null;
+  function loadPlotly() {
+    if (plotlyPromise) return plotlyPromise;
+    plotlyPromise = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.plot.ly/plotly-2.35.2.min.js';
+      script.onload = () => resolve(window.Plotly);
+      script.onerror = () => {
+        plotlyPromise = null;
+        reject(new Error('Kon Plotly niet laden'));
+      };
+      document.head.appendChild(script);
+    });
+    return plotlyPromise;
+  }
+
+  let motionCloseBound = false;
+  function bindMotionClose() {
+    if (motionCloseBound) return;
+    motionCloseBound = true;
+    document.getElementById('motion-close-btn').addEventListener('click', () => {
+      document.getElementById('motion-view').classList.add('hidden');
+      renderDayView();
+    });
+  }
+
+  async function showMotionView(name, day) {
+    const section = document.getElementById('motion-view');
+    const labelEl = document.getElementById('motion-label');
+    const titleEl = document.getElementById('motion-title');
+    const summaryEl = document.getElementById('motion-summary');
+    const statusEl = document.getElementById('motion-status');
+    const chartEl = document.getElementById('motion-chart');
+
+    bindMotionClose();
+    document.getElementById('checkin-section').classList.add('hidden');
+    document.getElementById('gimmick').classList.add('hidden');
+    section.classList.remove('hidden');
+
+    labelEl.textContent = `Beweging — Dag ${day}`;
+    titleEl.textContent = name;
+    summaryEl.innerHTML = '';
+    chartEl.innerHTML = '';
+    statusEl.classList.remove('error');
+    statusEl.textContent = 'Bezig met laden…';
+    section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    try {
+      const [data, Plotly] = await Promise.all([
+        fetchMotion(name, day),
+        loadPlotly(),
+      ]);
+      renderMotionSummary(summaryEl, data);
+      renderMotionChart(Plotly, chartEl, data);
+      statusEl.textContent = '';
+    } catch (err) {
+      statusEl.classList.add('error');
+      statusEl.textContent = err.message || 'Iets ging mis bij het laden van de beweging.';
+    }
+  }
+
+  async function fetchMotion(name, day) {
+    const url = `/api/motion/${encodeURIComponent(name)}/${day}`;
+    const res = await fetch(url, { headers: { 'X-Participant-Code': code } });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  }
+
+  function renderMotionSummary(el, data) {
+    const meta = data.analysisMeta || {};
+    const sampleHz = (data.sampleCount && data.durationMs)
+      ? Math.round(1000 * data.sampleCount / data.durationMs)
+      : '?';
+    const items = [
+      ['Push-ups', `<strong>${meta.pushups ?? data.analyzedPushups ?? '?'}</strong>`],
+      ['Sets', `<strong>${meta.sets ?? data.analyzedSets ?? '?'}</strong>`],
+      ['Per set', meta.perSet?.join(', ') ?? '—'],
+      ['Duur', `${(data.durationMs / 1000).toFixed(2)} s`],
+      ['Samples', `${data.sampleCount} (~${sampleHz} Hz)`],
+      ['Dominante as', meta.dominantAxis ?? '?'],
+      ['Drempel', meta.threshold?.toFixed(2) ?? '?'],
+      ['Algoritme', `v${meta.algorithmVersion ?? '?'}`],
+    ];
+    el.innerHTML = items.map(([k, v]) =>
+      `<div><div class="label">${k}</div><div class="value">${v}</div></div>`
+    ).join('');
+  }
+
+  function renderMotionChart(Plotly, el, data) {
+    const raw = data.raw;
+    const meta = data.analysisMeta || {};
+    const t = raw.t;
+    const peakTs = meta.peakTimestamps || [];
+    const dominant = meta.dominantAxis || 'z';
+
+    const peakIdx = peakTs.map(pt => {
+      let best = 0, bestDiff = Infinity;
+      for (let i = 0; i < t.length; i++) {
+        const diff = Math.abs(t[i] - pt);
+        if (diff < bestDiff) { bestDiff = diff; best = i; }
+      }
+      return best;
+    });
+
+    const setBoundaries = [];
+    for (let i = 1; i < peakTs.length; i++) {
+      if (peakTs[i] - peakTs[i - 1] > 5000) {
+        setBoundaries.push((peakTs[i] + peakTs[i - 1]) / 2);
+      }
+    }
+
+    const isDark = !window.matchMedia('(prefers-color-scheme: light)').matches;
+    const palette = isDark
+      ? { paper: '#1e293b', plot: '#0f172a', text: '#f1f5f9', grid: '#334155', boundary: '#fbbf24', x: '#ef4444', y: '#22c55e', z: '#38bdf8', peak: '#fbbf24' }
+      : { paper: '#f1f5f9', plot: '#ffffff', text: '#0f172a', grid: '#cbd5e1', boundary: '#d97706', x: '#dc2626', y: '#16a34a', z: '#0284c7', peak: '#d97706' };
+    const colors = { x: palette.x, y: palette.y, z: palette.z };
+
+    const lineTrace = (name, x, y, color, axis) => ({
+      x, y, type: 'scattergl', mode: 'lines', name,
+      line: { color, width: 1.5 },
+      xaxis: 'x' + axis, yaxis: 'y' + axis,
+    });
+    const dominantArr = raw['a' + dominant];
+    const peakMarkers = {
+      x: peakIdx.map(i => t[i]),
+      y: peakIdx.map(i => dominantArr[i]),
+      type: 'scatter', mode: 'markers',
+      name: `peaks (${dominant})`,
+      marker: { color: palette.peak, size: 9, symbol: 'circle-open', line: { width: 2 } },
+      xaxis: 'x', yaxis: 'y',
+    };
+
+    const traces = [
+      lineTrace('ax',  t, raw.ax,  colors.x, ''),
+      lineTrace('ay',  t, raw.ay,  colors.y, ''),
+      lineTrace('az',  t, raw.az,  colors.z, ''),
+      peakMarkers,
+      lineTrace('lax', t, raw.lax, colors.x, '2'),
+      lineTrace('lay', t, raw.lay, colors.y, '2'),
+      lineTrace('laz', t, raw.laz, colors.z, '2'),
+      lineTrace('rx',  t, raw.rx,  colors.x, '3'),
+      lineTrace('ry',  t, raw.ry,  colors.y, '3'),
+      lineTrace('rz',  t, raw.rz,  colors.z, '3'),
+    ];
+
+    const shapes = setBoundaries.flatMap(x => ['', '2', '3'].map(suffix => ({
+      type: 'line',
+      xref: 'x' + suffix,
+      yref: 'y' + suffix + ' domain',
+      x0: x, x1: x, y0: 0, y1: 1,
+      line: { color: palette.boundary, width: 2, dash: 'dash' },
+    })));
+
+    const layout = {
+      paper_bgcolor: palette.paper,
+      plot_bgcolor: palette.plot,
+      font: { color: palette.text, size: 11 },
+      margin: { t: 24, r: 18, b: 40, l: 56 },
+      legend: { orientation: 'h', y: 1.08, font: { size: 10 } },
+      grid: { rows: 3, columns: 1, pattern: 'independent' },
+      xaxis:  { matches: 'x3', showticklabels: false, gridcolor: palette.grid },
+      xaxis2: { matches: 'x3', showticklabels: false, gridcolor: palette.grid },
+      xaxis3: { title: 'Tijd (ms)', gridcolor: palette.grid },
+      yaxis:  { title: 'Accel',        gridcolor: palette.grid },
+      yaxis2: { title: 'Linear accel', gridcolor: palette.grid },
+      yaxis3: { title: 'Rotation',     gridcolor: palette.grid },
+      shapes,
+      hovermode: 'x unified',
+    };
+
+    Plotly.react(el, traces, layout, { responsive: true, displaylogo: false });
   }
 
   init();

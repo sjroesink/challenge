@@ -12,7 +12,7 @@ import { getCurrentDay } from '../src/day.js';
 import { closeDb } from '../src/db.js';
 
 const participants = JSON.parse(readFileSync('participants.json', 'utf-8'));
-const DB_PATH = 'data/challenge.db';
+const DB_PATH = 'data/challenge-test.db';
 
 describe('API Routes', () => {
   let app;

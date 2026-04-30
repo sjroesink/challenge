@@ -7,7 +7,8 @@ let db;
 function getDb() {
   if (db) return db;
 
-  const dbPath = join(process.cwd(), 'data', 'challenge.db');
+  const dbName = process.env.NODE_ENV === 'test' ? 'challenge-test.db' : 'challenge.db';
+  const dbPath = join(process.cwd(), 'data', dbName);
   mkdirSync(dirname(dbPath), { recursive: true });
 
   db = new Database(dbPath);
@@ -56,7 +57,12 @@ function getDb() {
 }
 
 function getAllCheckins() {
-  return getDb().prepare('SELECT code, day, sets, checked_at, gimmick_text, gimmick_video FROM checkins ORDER BY day DESC').all();
+  return getDb().prepare(`
+    SELECT c.code, c.day, c.sets, c.checked_at, c.gimmick_text, c.gimmick_video,
+           EXISTS(SELECT 1 FROM motion_recordings m WHERE m.code = c.code AND m.day = c.day) AS has_motion
+    FROM checkins c
+    ORDER BY c.day DESC
+  `).all();
 }
 
 function getCheckin(code, day) {
@@ -122,6 +128,12 @@ function getMotionRecording(code, day) {
   ).get(code, day);
 }
 
+function getMotionRecordingFull(code, day) {
+  return getDb().prepare(
+    'SELECT code, day, recorded_at, duration_ms, sample_count, raw_data, analyzed_pushups, analyzed_sets, analysis_meta FROM motion_recordings WHERE code = ? AND day = ?'
+  ).get(code, day);
+}
+
 function closeDb() {
   if (db) {
     db.close();
@@ -140,5 +152,6 @@ export {
   deleteSubscription,
   insertMotionRecording,
   getMotionRecording,
+  getMotionRecordingFull,
   closeDb,
 };

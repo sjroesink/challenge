@@ -28,7 +28,7 @@ const indexHtml = readFileSync(join(publicDir, 'index.html'), 'utf-8')
 
 // Serve index.html for root and participant codes
 const serveIndex = async (request, reply) => {
-  reply.type('text/html').send(indexHtml);
+  reply.header('Cache-Control', 'no-cache').type('text/html').send(indexHtml);
 };
 
 app.get('/', serveIndex);

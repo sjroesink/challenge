@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <title>Motion Recording Viewer</title>
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0f1117;
+      --panel: #1e293b;
+      --border: #1e2533;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    h1 { margin: 0; font-size: 18px; font-weight: 600; }
+    input[type=file] {
+      background: var(--panel);
+      color: var(--text);
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .summary {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+      padding: 12px 24px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .summary div span {
+      color: var(--muted);
+      margin-right: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-size: 11px;
+    }
+    .summary strong { color: var(--accent); font-weight: 600; }
+    #plot { width: 100%; height: calc(100vh - 130px); }
+    .empty {
+      padding: 40px 24px;
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📊 Motion Recording Viewer</h1>
+    <input type="file" id="file" accept=".json,application/json" />
+    <span class="muted" id="filename" style="color: var(--muted); font-size: 13px;"></span>
+  </header>
+
+  <div id="summary" class="summary" style="display:none"></div>
+  <div id="plot"></div>
+  <div id="empty" class="empty">Kies een JSON-bestand uit <code>recordings/</code> om te starten.</div>
+
+  <script>
+    const fileInput = document.getElementById('file');
+    const filenameEl = document.getElementById('filename');
+    const summaryEl = document.getElementById('summary');
+    const plotEl = document.getElementById('plot');
+    const emptyEl = document.getElementById('empty');
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      filenameEl.textContent = file.name;
+      const text = await file.text();
+      try {
+        render(JSON.parse(text));
+      } catch (err) {
+        alert('Kan bestand niet parsen: ' + err.message);
+      }
+    });
+
+    function render(data) {
+      const raw = data.raw;
+      const meta = data.analysisMeta || {};
+      const t = raw.t;
+      const peakTs = meta.peakTimestamps || [];
+      const dominant = meta.dominantAxis || 'z';
+
+      // Find peak indices to plot markers exactly on the curve
+      const peakIdx = peakTs.map(pt => {
+        let best = 0, bestDiff = Infinity;
+        for (let i = 0; i < t.length; i++) {
+          const diff = Math.abs(t[i] - pt);
+          if (diff < bestDiff) { bestDiff = diff; best = i; }
+        }
+        return best;
+      });
+
+      // Set boundaries — gaps > 5s in peak timestamps
+      const setBoundaries = [];
+      for (let i = 1; i < peakTs.length; i++) {
+        if (peakTs[i] - peakTs[i - 1] > 5000) {
+          setBoundaries.push((peakTs[i] + peakTs[i - 1]) / 2);
+        }
+      }
+
+      // Summary header
+      const sampleHz = (raw.sampleCount && raw.durationMs)
+        ? Math.round(1000 * raw.sampleCount / raw.durationMs)
+        : '?';
+      summaryEl.style.display = 'flex';
+      summaryEl.innerHTML = [
+        ['Wie', `${data.code} (dag ${data.day})`],
+        ['Opgenomen', new Date(data.recordedAt).toLocaleString('nl-NL')],
+        ['Duur', `${(data.durationMs / 1000).toFixed(2)} s`],
+        ['Samples', `${data.sampleCount} (~${sampleHz} Hz)`],
+        ['Push-ups', `<strong>${meta.pushups ?? '?'}</strong>`],
+        ['Sets', `<strong>${meta.sets ?? '?'}</strong> (per set: ${meta.perSet?.join(', ') ?? '?'})`],
+        ['Dominante as', `<strong>${dominant}</strong>`],
+        ['Drempel', meta.threshold?.toFixed(2) ?? '?'],
+        ['Algoritme', `v${meta.algorithmVersion ?? '?'}`],
+      ].map(([k, v]) => `<div><span>${k}</span>${v}</div>`).join('');
+
+      const colors = { x: '#ef4444', y: '#22c55e', z: '#38bdf8' };
+      const trace = (name, x, y, color, dash = false) => ({
+        x, y,
+        type: 'scattergl',
+        mode: 'lines',
+        name,
+        line: { color, width: 1.5, dash: dash ? 'dot' : 'solid' },
+      });
+      const peakMarkers = (yArr, color) => ({
+        x: peakIdx.map(i => t[i]),
+        y: peakIdx.map(i => yArr[i]),
+        type: 'scatter',
+        mode: 'markers',
+        name: `peaks (${dominant})`,
+        marker: { color, size: 9, symbol: 'circle-open', line: { width: 2 } },
+        showlegend: true,
+      });
+
+      const dominantArr = raw['a' + dominant];
+
+      const traces = [
+        // Subplot 1: raw accel
+        { ...trace('ax', t, raw.ax, colors.x), xaxis: 'x', yaxis: 'y' },
+        { ...trace('ay', t, raw.ay, colors.y), xaxis: 'x', yaxis: 'y' },
+        { ...trace('az', t, raw.az, colors.z), xaxis: 'x', yaxis: 'y' },
+        { ...peakMarkers(dominantArr, '#fbbf24'), xaxis: 'x', yaxis: 'y' },
+
+        // Subplot 2: linear accel
+        { ...trace('lax', t, raw.lax, colors.x), xaxis: 'x2', yaxis: 'y2' },
+        { ...trace('lay', t, raw.lay, colors.y), xaxis: 'x2', yaxis: 'y2' },
+        { ...trace('laz', t, raw.laz, colors.z), xaxis: 'x2', yaxis: 'y2' },
+
+        // Subplot 3: rotation
+        { ...trace('rx', t, raw.rx, colors.x), xaxis: 'x3', yaxis: 'y3' },
+        { ...trace('ry', t, raw.ry, colors.y), xaxis: 'x3', yaxis: 'y3' },
+        { ...trace('rz', t, raw.rz, colors.z), xaxis: 'x3', yaxis: 'y3' },
+      ];
+
+      // Vertical set-boundary shapes — apply to all subplots
+      const shapes = setBoundaries.flatMap(x => ['', '2', '3'].map(suffix => ({
+        type: 'line',
+        xref: 'x' + suffix,
+        yref: 'y' + suffix + ' domain',
+        x0: x, x1: x, y0: 0, y1: 1,
+        line: { color: '#fbbf24', width: 2, dash: 'dash' },
+      })));
+
+      const layout = {
+        paper_bgcolor: '#0f1117',
+        plot_bgcolor: '#1e293b',
+        font: { color: '#f1f5f9' },
+        margin: { t: 20, r: 30, b: 40, l: 60 },
+        legend: { orientation: 'h', y: 1.06 },
+        grid: { rows: 3, columns: 1, pattern: 'independent' },
+        xaxis:  { title: '', matches: 'x3', showticklabels: false, gridcolor: '#334155' },
+        xaxis2: { matches: 'x3', showticklabels: false, gridcolor: '#334155' },
+        xaxis3: { title: 'Tijd (ms)', gridcolor: '#334155' },
+        yaxis:  { title: 'Accel (m/s²)',        gridcolor: '#334155' },
+        yaxis2: { title: 'Linear accel (m/s²)', gridcolor: '#334155' },
+        yaxis3: { title: 'Rotation (°/s)',      gridcolor: '#334155' },
+        shapes,
+        hovermode: 'x unified',
+      };
+
+      Plotly.react(plotEl, traces, layout, { responsive: true, displaylogo: false });
+      emptyEl.style.display = 'none';
+    }
+  </script>
+</body>
+</html>
