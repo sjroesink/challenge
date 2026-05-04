@@ -66,6 +66,9 @@
   <header>
     <h1>📊 Motion Recording Viewer</h1>
     <input type="file" id="file" accept=".json,application/json" />
+    <label style="font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px;">
+      <input type="checkbox" id="auto-trim-toggle" checked /> Auto-trim
+    </label>
     <span class="muted" id="filename" style="color: var(--muted); font-size: 13px;"></span>
   </header>
 
@@ -79,6 +82,9 @@
     const summaryEl = document.getElementById('summary');
     const plotEl = document.getElementById('plot');
     const emptyEl = document.getElementById('empty');
+    const autoTrimToggle = document.getElementById('auto-trim-toggle');
+
+    let lastData = null;
 
     fileInput.addEventListener('change', async () => {
       const file = fileInput.files[0];
@@ -86,11 +92,137 @@
       filenameEl.textContent = file.name;
       const text = await file.text();
       try {
-        render(JSON.parse(text));
+        lastData = JSON.parse(text);
+        render(lastData);
       } catch (err) {
         alert('Kan bestand niet parsen: ' + err.message);
       }
     });
+
+    autoTrimToggle.addEventListener('change', () => {
+      if (lastData) render(lastData);
+    });
+
+    // Centered moving average over a time-aware window — kept in sync with
+    // tools/algorithms.mjs `movingAvg` so the viewer's auto-trim matches the
+    // benchmark exactly.
+    function movingAvg(signal, t, windowMs) {
+      const n = signal.length;
+      const out = new Array(n);
+      let lo = 0, hi = 0, sum = 0;
+      for (let i = 0; i < n; i++) {
+        const target = t[i];
+        while (lo < n && t[lo] < target - windowMs / 2) { sum -= signal[lo]; lo++; }
+        while (hi < n && t[hi] <= target + windowMs / 2) { sum += signal[hi]; hi++; }
+        const count = hi - lo;
+        out[i] = count > 0 ? sum / count : 0;
+      }
+      return out;
+    }
+
+    // Mirror of tools/algorithms.mjs `autoTrim`. Returns { rolling, threshold,
+    // startMs, endMs, skipped, eventCount }. Math kept identical so the
+    // viewer's overlay is faithful to the benchmark's pre-processing.
+    function computeAutoTrim(raw, opts = {}) {
+      const windowMs           = opts.windowMs           ?? 500;
+      const minSegmentMs       = opts.minSegmentMs       ?? 3000;
+      const insetMs            = opts.insetMs            ?? 200;
+      const eventMultiplier    = opts.eventMultiplier    ?? 4;
+      const eventP98Floor      = opts.eventP98Floor      ?? 0.5;
+      const eventClusterGapMs  = opts.eventClusterGapMs  ?? 800;
+      const tailMultiplier     = opts.tailMultiplier     ?? 2;
+      const tailStableMs       = opts.tailStableMs       ?? 1500;
+
+      const t = raw.t;
+      if (!Array.isArray(t) || t.length < 30) {
+        return { skipped: 'too-short' };
+      }
+      const omega = new Array(t.length);
+      for (let i = 0; i < t.length; i++) {
+        omega[i] = Math.sqrt(raw.rx[i] ** 2 + raw.ry[i] ** 2 + raw.rz[i] ** 2);
+      }
+      const rolling = movingAvg(omega, t, windowMs);
+      const sorted = [...rolling].sort((a, b) => a - b);
+      const median = sorted[Math.floor(sorted.length * 0.50)];
+      const p98    = sorted[Math.floor(sorted.length * 0.98)];
+      const eventThreshold = Math.max(median * eventMultiplier, p98 * eventP98Floor);
+
+      const clusters = [];
+      let cur = null;
+      let belowSinceT = -Infinity;
+      for (let i = 0; i < rolling.length; i++) {
+        if (rolling[i] > eventThreshold) {
+          if (!cur) cur = { startIdx: i, endIdx: i };
+          else cur.endIdx = i;
+          belowSinceT = -Infinity;
+        } else if (cur) {
+          if (belowSinceT === -Infinity) belowSinceT = t[i];
+          if (t[i] - belowSinceT > eventClusterGapMs) {
+            clusters.push(cur);
+            cur = null;
+          }
+        }
+      }
+      if (cur) clusters.push(cur);
+
+      if (clusters.length === 0) {
+        return { rolling, threshold: eventThreshold, skipped: 'no-events', eventCount: 0 };
+      }
+
+      // Tail extension — see tools/algorithms.mjs for the rationale.
+      const tailThreshold = median * tailMultiplier;
+      {
+        const lead = clusters[0];
+        let runStart = -1;
+        for (let i = lead.endIdx + 1; i < rolling.length; i++) {
+          if (rolling[i] < tailThreshold) {
+            if (runStart < 0) runStart = i;
+            if (t[i] - t[runStart] >= tailStableMs) {
+              lead.endIdx = runStart - 1;
+              break;
+            }
+          } else {
+            runStart = -1;
+          }
+        }
+      }
+      {
+        const trail = clusters[clusters.length - 1];
+        let runEnd = -1;
+        for (let i = trail.startIdx - 1; i >= 0; i--) {
+          if (rolling[i] < tailThreshold) {
+            if (runEnd < 0) runEnd = i;
+            if (t[runEnd] - t[i] >= tailStableMs) {
+              trail.startIdx = runEnd + 1;
+              break;
+            }
+          } else {
+            runEnd = -1;
+          }
+        }
+      }
+
+      const tStart = t[0], tEnd = t.at(-1);
+      const candidates = [{ startMs: tStart, endMs: t[clusters[0].startIdx] }];
+      for (let i = 0; i < clusters.length - 1; i++) {
+        candidates.push({ startMs: t[clusters[i].endIdx], endMs: t[clusters[i + 1].startIdx] });
+      }
+      candidates.push({ startMs: t[clusters.at(-1).endIdx], endMs: tEnd });
+      let best = candidates[0];
+      for (const c of candidates) if (c.endMs - c.startMs > best.endMs - best.startMs) best = c;
+
+      if (best.endMs - best.startMs < minSegmentMs) {
+        return { rolling, threshold: eventThreshold, skipped: 'no-stable-gap', eventCount: clusters.length };
+      }
+      return {
+        rolling,
+        threshold: eventThreshold,
+        tailThreshold,
+        startMs: best.startMs + insetMs,
+        endMs:   best.endMs   - insetMs,
+        eventCount: clusters.length,
+      };
+    }
 
     function render(data) {
       const raw = data.raw;
@@ -98,6 +230,8 @@
       const t = raw.t;
       const peakTs = meta.peakTimestamps || [];
       const dominant = meta.dominantAxis || 'z';
+
+      const trim = autoTrimToggle.checked ? computeAutoTrim(raw) : { skipped: 'disabled' };
 
       // Find peak indices to plot markers exactly on the curve
       const peakIdx = peakTs.map(pt => {
@@ -125,6 +259,12 @@
       const who = data.name ?? data.code ?? '?';
       const setLabel = data.setId != null ? ` · set #${data.setId}` : '';
       const repsLabel = data.reps != null ? ` · ${data.reps} reps` : '';
+      const trimSummary = trim.skipped
+        ? `<em style="color:#fbbf24">${trim.skipped}</em>`
+        : `keep <strong>${((trim.endMs - trim.startMs) / 1000).toFixed(1)}s</strong>` +
+          ` (–${((trim.startMs - t[0]) / 1000).toFixed(1)}s / –${((t.at(-1) - trim.endMs) / 1000).toFixed(1)}s)` +
+          ` · thr ${trim.threshold.toFixed(2)} · ${trim.eventCount} ev`;
+
       summaryEl.innerHTML = [
         ['Wie', `${who} (dag ${data.day}${setLabel}${repsLabel})`],
         ['Opgenomen', new Date(data.recordedAt).toLocaleString('nl-NL')],
@@ -134,6 +274,7 @@
         ['Dominante as', `<strong>${dominant}</strong>`],
         ['Drempel', meta.threshold?.toFixed(2) ?? '?'],
         ['Algoritme', `v${meta.algorithmVersion ?? '?'}`],
+        ['Auto-trim', trimSummary],
       ].map(([k, v]) => `<div><span>${k}</span>${v}</div>`).join('');
 
       const colors = { x: '#ef4444', y: '#22c55e', z: '#38bdf8' };
@@ -174,8 +315,19 @@
         { ...trace('rz', t, raw.rz, colors.z), xaxis: 'x3', yaxis: 'y3' },
       ];
 
-      // Vertical set-boundary shapes — apply to all subplots
-      const shapes = setBoundaries.flatMap(x => ['', '2', '3'].map(suffix => ({
+      // Subplot 4: rolling |ω| with event threshold (auto-trim diagnostic)
+      if (trim.rolling) {
+        traces.push({
+          x: t, y: trim.rolling,
+          type: 'scattergl', mode: 'lines',
+          name: 'rolling |ω|',
+          line: { color: '#a78bfa', width: 1.5 },
+          xaxis: 'x4', yaxis: 'y4',
+        });
+      }
+
+      // Set-boundary lines (carry through from existing analysis)
+      const shapes = setBoundaries.flatMap(x => ['', '2', '3', '4'].map(suffix => ({
         type: 'line',
         xref: 'x' + suffix,
         yref: 'y' + suffix + ' domain',
@@ -183,19 +335,66 @@
         line: { color: '#fbbf24', width: 2, dash: 'dash' },
       })));
 
+      // Auto-trim overlay: shade dropped regions in red across all subplots,
+      // and draw the threshold line on the rolling-|ω| panel.
+      if (!trim.skipped && trim.startMs != null) {
+        const tStart = t[0], tEnd = t.at(-1);
+        for (const suffix of ['', '2', '3', '4']) {
+          if (trim.startMs > tStart) {
+            shapes.push({
+              type: 'rect',
+              xref: 'x' + suffix, yref: 'y' + suffix + ' domain',
+              x0: tStart, x1: trim.startMs, y0: 0, y1: 1,
+              fillcolor: 'rgba(239,68,68,0.12)', line: { width: 0 },
+            });
+          }
+          if (trim.endMs < tEnd) {
+            shapes.push({
+              type: 'rect',
+              xref: 'x' + suffix, yref: 'y' + suffix + ' domain',
+              x0: trim.endMs, x1: tEnd, y0: 0, y1: 1,
+              fillcolor: 'rgba(239,68,68,0.12)', line: { width: 0 },
+            });
+          }
+        }
+      }
+      if (trim.threshold != null) {
+        shapes.push({
+          type: 'line',
+          xref: 'x4', yref: 'y4',
+          x0: t[0], x1: t.at(-1),
+          y0: trim.threshold, y1: trim.threshold,
+          line: { color: '#ef4444', width: 1.5, dash: 'dash' },
+        });
+      }
+      if (trim.tailThreshold != null) {
+        shapes.push({
+          type: 'line',
+          xref: 'x4', yref: 'y4',
+          x0: t[0], x1: t.at(-1),
+          y0: trim.tailThreshold, y1: trim.tailThreshold,
+          line: { color: '#fbbf24', width: 1, dash: 'dot' },
+        });
+      }
+
+      const hasOmega = !!trim.rolling;
       const layout = {
         paper_bgcolor: '#0f1117',
         plot_bgcolor: '#1e293b',
         font: { color: '#f1f5f9' },
         margin: { t: 20, r: 30, b: 40, l: 60 },
         legend: { orientation: 'h', y: 1.06 },
-        grid: { rows: 3, columns: 1, pattern: 'independent' },
-        xaxis:  { title: '', matches: 'x3', showticklabels: false, gridcolor: '#334155' },
-        xaxis2: { matches: 'x3', showticklabels: false, gridcolor: '#334155' },
-        xaxis3: { title: 'Tijd (ms)', gridcolor: '#334155' },
+        grid: { rows: hasOmega ? 4 : 3, columns: 1, pattern: 'independent' },
+        xaxis:  { matches: hasOmega ? 'x4' : 'x3', showticklabels: false, gridcolor: '#334155' },
+        xaxis2: { matches: hasOmega ? 'x4' : 'x3', showticklabels: false, gridcolor: '#334155' },
+        xaxis3: { matches: hasOmega ? 'x4' : 'x3', showticklabels: !hasOmega, title: hasOmega ? '' : 'Tijd (ms)', gridcolor: '#334155' },
         yaxis:  { title: 'Accel (m/s²)',        gridcolor: '#334155' },
         yaxis2: { title: 'Linear accel (m/s²)', gridcolor: '#334155' },
         yaxis3: { title: 'Rotation (°/s)',      gridcolor: '#334155' },
+        ...(hasOmega ? {
+          xaxis4: { title: 'Tijd (ms)', gridcolor: '#334155' },
+          yaxis4: { title: '|ω| rolling',  gridcolor: '#334155' },
+        } : {}),
         shapes,
         hovermode: 'x unified',
       };
