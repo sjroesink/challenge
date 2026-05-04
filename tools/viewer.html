@@ -122,13 +122,15 @@
         ? Math.round(1000 * raw.sampleCount / raw.durationMs)
         : '?';
       summaryEl.style.display = 'flex';
+      const who = data.name ?? data.code ?? '?';
+      const setLabel = data.setId != null ? ` · set #${data.setId}` : '';
+      const repsLabel = data.reps != null ? ` · ${data.reps} reps` : '';
       summaryEl.innerHTML = [
-        ['Wie', `${data.code} (dag ${data.day})`],
+        ['Wie', `${who} (dag ${data.day}${setLabel}${repsLabel})`],
         ['Opgenomen', new Date(data.recordedAt).toLocaleString('nl-NL')],
         ['Duur', `${(data.durationMs / 1000).toFixed(2)} s`],
         ['Samples', `${data.sampleCount} (~${sampleHz} Hz)`],
-        ['Push-ups', `<strong>${meta.pushups ?? '?'}</strong>`],
-        ['Sets', `<strong>${meta.sets ?? '?'}</strong> (per set: ${meta.perSet?.join(', ') ?? '?'})`],
+        ['Push-ups gedetecteerd', `<strong>${meta.pushups ?? '?'}</strong>`],
         ['Dominante as', `<strong>${dominant}</strong>`],
         ['Drempel', meta.threshold?.toFixed(2) ?? '?'],
         ['Algoritme', `v${meta.algorithmVersion ?? '?'}`],

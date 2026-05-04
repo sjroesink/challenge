@@ -24,25 +24,34 @@
       </div>
     </header>
 
-    <section id="checkin-section" class="checkin hidden">
-      <div class="checkin-info">
-        <div class="checkin-label" id="checkin-label"></div>
-        <div class="checkin-day" id="checkin-day"></div>
-      </div>
-      <div class="checkin-action">
-        <div class="sets-input-group">
-          <span class="sets-label-text">Sets:</span>
-          <input type="number" id="sets-input" min="1" value="1" />
+    <section id="cell-section" class="cell hidden">
+      <div class="cell-header">
+        <div>
+          <div class="cell-label" id="cell-label"></div>
+          <div class="cell-meta" id="cell-meta"></div>
         </div>
-        <button id="checkin-btn" class="btn-checkin">✓ Gehaald!</button>
+        <button type="button" id="cell-close-btn" class="cell-close hidden">✕ Sluiten</button>
       </div>
-      <div id="record-area" class="record-area hidden">
-        <button id="record-btn" class="btn-record" type="button">🎙️ Opname starten</button>
-        <div id="record-status" class="record-status hidden"></div>
+
+      <div class="cell-progress">
+        <div class="cell-tally" id="cell-tally"></div>
+        <div class="cell-bar"><div class="cell-bar-fill" id="cell-bar-fill"></div></div>
+      </div>
+
+      <ul id="sets-list" class="sets-list"></ul>
+
+      <div id="add-set-area" class="add-set-area hidden">
+        <div class="reps-input-group">
+          <span class="reps-label-text">Reps:</span>
+          <input type="number" id="reps-input" min="1" value="10" />
+        </div>
+        <div id="record-area" class="record-area hidden">
+          <button id="record-btn" class="btn-record" type="button">🎙️ Opname starten</button>
+          <div id="record-status" class="record-status hidden"></div>
+        </div>
+        <button id="add-set-btn" class="btn-add-set">+ Setje toevoegen</button>
       </div>
     </section>
-
-    <section id="gimmick" class="gimmick hidden"></section>
 
     <section id="motion-view" class="motion-view hidden">
       <div class="motion-header">
