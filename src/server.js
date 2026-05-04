@@ -15,16 +15,19 @@ const app = Fastify({ logger: true, bodyLimit: 8 * 1024 * 1024 });
 // Pre-load static files with cache-busting hashes
 const styleCss = readFileSync(join(publicDir, 'style.css'), 'utf-8');
 const appJs = readFileSync(join(publicDir, 'app.js'), 'utf-8');
+const motionLiveJs = readFileSync(join(publicDir, 'motionLive.js'), 'utf-8');
 const swJs = readFileSync(join(publicDir, 'sw.js'), 'utf-8');
 const manifestJson = readFileSync(join(publicDir, 'manifest.json'), 'utf-8');
 const iconSvg = readFileSync(join(publicDir, 'icon.svg'), 'utf-8');
 
-const styleHash = createHash('md5').update(styleCss).digest('hex').slice(0, 8);
-const appHash = createHash('md5').update(appJs).digest('hex').slice(0, 8);
+const styleHash      = createHash('md5').update(styleCss).digest('hex').slice(0, 8);
+const appHash        = createHash('md5').update(appJs).digest('hex').slice(0, 8);
+const motionLiveHash = createHash('md5').update(motionLiveJs).digest('hex').slice(0, 8);
 
 const indexHtml = readFileSync(join(publicDir, 'index.html'), 'utf-8')
-  .replace('/style.css', `/style.${styleHash}.css`)
-  .replace('/app.js', `/app.${appHash}.js`);
+  .replace('/style.css',      `/style.${styleHash}.css`)
+  .replace('/motionLive.js', `/motionLive.${motionLiveHash}.js`)
+  .replace('/app.js',         `/app.${appHash}.js`);
 
 // Serve index.html for root and participant codes
 const serveIndex = async (request, reply) => {
@@ -42,6 +45,9 @@ app.get(`/style.${styleHash}.css`, async (request, reply) => {
 });
 app.get(`/app.${appHash}.js`, async (request, reply) => {
   reply.header('Cache-Control', 'public, max-age=31536000, immutable').type('application/javascript').send(appJs);
+});
+app.get(`/motionLive.${motionLiveHash}.js`, async (request, reply) => {
+  reply.header('Cache-Control', 'public, max-age=31536000, immutable').type('application/javascript').send(motionLiveJs);
 });
 
 // PWA assets (no cache)

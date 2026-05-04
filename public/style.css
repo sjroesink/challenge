@@ -513,7 +513,8 @@ header {
 }
 
 .reps-input-group {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0; /* allow shrinking below content's intrinsic size in narrow rows */
   display: flex;
   align-items: baseline;
   gap: 8px;

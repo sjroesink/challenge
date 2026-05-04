@@ -28,6 +28,17 @@
   let capturedMotion = null;
   const MAX_SAMPLES = 100000; // ~27 min @ 60 Hz
 
+  // ── Live counting + speech ───────────────────────────────────────────────
+  // Phone goes in pocket → user does push-ups → app speaks each rep count
+  // out loud. The countdown also serves as a calibration window: samples
+  // collected during 0..CALIBRATION_MS are skipped by the live analyzer
+  // (so the "phone shoved into pocket" transient doesn't pollute peaks).
+  const CALIBRATION_MS = 5000;
+  const LIVE_INTERVAL_MS = 500;
+  let liveTimer = null;
+  let liveCountdownTimers = [];
+  let liveCount = 0;
+
   async function init() {
     if ('serviceWorker' in navigator) {
       try {
@@ -532,6 +543,109 @@
     }
   }
 
+  // ── Speech + countdown + live analyzer ──────────────────────────────────
+
+  function isSpeechAvailable() {
+    return typeof speechSynthesis !== 'undefined'
+      && typeof SpeechSynthesisUtterance !== 'undefined';
+  }
+
+  function speak(text, opts = {}) {
+    if (!isSpeechAvailable()) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(String(text));
+    u.lang = opts.lang ?? 'nl-NL';
+    u.rate = opts.rate ?? 1.05;
+    u.volume = opts.volume ?? 1;
+    speechSynthesis.speak(u);
+  }
+
+  function startCountdown() {
+    cancelCountdown();
+    if (!isSpeechAvailable()) return;
+    // Prime the speech engine inside the user gesture (iOS quirk).
+    const primer = new SpeechSynthesisUtterance(' ');
+    primer.volume = 0;
+    speechSynthesis.speak(primer);
+
+    // Speak each beat in its own scheduled tick. We track timers so we can
+    // cancel mid-countdown if the user stops the recording early.
+    const beats = [
+      { at: 0,    text: '5' },
+      { at: 1000, text: '4' },
+      { at: 2000, text: '3' },
+      { at: 3000, text: '2' },
+      { at: 4000, text: '1' },
+    ];
+    for (const b of beats) {
+      liveCountdownTimers.push(setTimeout(() => speak(b.text), b.at));
+    }
+  }
+
+  function cancelCountdown() {
+    for (const id of liveCountdownTimers) clearTimeout(id);
+    liveCountdownTimers = [];
+  }
+
+  function startLiveCounter() {
+    stopLiveCounter();
+    liveCount = 0;
+    // Start analysis after the calibration window. Once the timer is armed,
+    // each tick re-runs sensorFusion on the buffer-since-calibration and
+    // speaks any newly detected reps.
+    liveCountdownTimers.push(setTimeout(() => {
+      if (recordState !== 'recording') return;
+      liveTimer = setInterval(runLiveAnalyzer, LIVE_INTERVAL_MS);
+    }, CALIBRATION_MS));
+  }
+
+  // Stops the analyzer loop but preserves `liveCount` so finishRecording can
+  // use it to auto-fill the reps input. The count resets on the next
+  // startLiveCounter or in clearCapturedRecording.
+  function stopLiveCounter() {
+    if (liveTimer) {
+      clearInterval(liveTimer);
+      liveTimer = null;
+    }
+  }
+
+  function runLiveAnalyzer() {
+    if (recordState !== 'recording' || !buf || !window.MotionLive) return;
+    // Skip samples taken during the calibration window — those include the
+    // "phone shoved into pocket" transient and we don't want them in peak math.
+    const cutoff = CALIBRATION_MS;
+    const startIdx = lowerBound(buf.t, cutoff);
+    const sliceLen = buf.t.length - startIdx;
+    if (sliceLen < 30) return; // not enough samples yet for reliable detection
+
+    const slice = (arr) => arr.slice(startIdx);
+    const sliced = {
+      t:   slice(buf.t).map(t => t - cutoff),
+      ax:  slice(buf.ax),  ay:  slice(buf.ay),  az:  slice(buf.az),
+      lax: slice(buf.lax), lay: slice(buf.lay), laz: slice(buf.laz),
+      rx:  slice(buf.rx),  ry:  slice(buf.ry),  rz:  slice(buf.rz),
+    };
+
+    const result = window.MotionLive.sensorFusion(sliced);
+    const count = result.pushups;
+    if (count > liveCount) {
+      liveCount = count;
+      speak(String(count));
+      renderRecordUI();
+    }
+  }
+
+  // Binary search: first index in sortedArr with value >= target.
+  function lowerBound(sortedArr, target) {
+    let lo = 0, hi = sortedArr.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >>> 1;
+      if (sortedArr[mid] < target) lo = mid + 1;
+      else hi = mid;
+    }
+    return lo;
+  }
+
   async function beginRecording() {
     try {
       if (!motionPermissionGranted &&
@@ -578,6 +692,8 @@
     recordState = 'recording';
     requestWakeLock();
     startRecordTimer();
+    startCountdown();
+    startLiveCounter();
     renderRecordUI();
   }
 
@@ -589,6 +705,9 @@
     }
     stopRecordTimer();
     releaseWakeLock();
+    stopLiveCounter();
+    cancelCountdown();
+    if (isSpeechAvailable()) speechSynthesis.cancel();
 
     const durationMs = Math.max(0, Math.round(performance.now() - recordStartedAt));
     const sampleCount = buf ? buf.t.length : 0;
@@ -611,12 +730,25 @@
     };
     buf = null;
     recordState = 'captured';
+
+    // Fill the reps input with the live-detected count. The user can still
+    // tweak it before saving — counted is usually closer to truth than what
+    // they planned to do.
+    if (liveCount > 0) {
+      const repsInput = document.getElementById('reps-input');
+      if (repsInput) repsInput.value = String(liveCount);
+    }
+
     renderRecordUI();
   }
 
   function clearCapturedRecording() {
     capturedMotion = null;
     if (recordState === 'captured') recordState = 'idle';
+    stopLiveCounter();
+    cancelCountdown();
+    liveCount = 0;
+    if (isSpeechAvailable()) speechSynthesis.cancel();
     renderRecordUI();
   }
 
@@ -694,7 +826,11 @@
       btn.disabled = false;
       btn.title = 'Stop opname';
       status.classList.remove('hidden');
-      status.innerHTML = `<span class="live"></span><span>REC · ${formatDuration(ms)} · ${samples} samples</span>`;
+      const calibrating = ms < CALIBRATION_MS;
+      const phase = calibrating
+        ? `kalibratie · ${Math.ceil((CALIBRATION_MS - ms) / 1000)}s`
+        : `<b>${liveCount}</b> reps · ${formatDuration(ms)}`;
+      status.innerHTML = `<span class="live"></span><span>REC · ${phase} · ${samples} samples</span>`;
     } else if (recordState === 'captured') {
       const ms = capturedMotion?.durationMs ?? 0;
       const samples = capturedMotion?.sampleCount ?? 0;
