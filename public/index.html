@@ -3,71 +3,115 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>💪 Push-Up Challenge</title>
+  <title>Push-Up Challenge</title>
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="manifest" href="/manifest.json">
-  <meta name="theme-color" content="#0f1117">
+  <meta name="theme-color" content="#0e0f12">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Push-Ups">
   <link rel="apple-touch-icon" href="/icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <div class="container">
     <header>
-      <div>
-        <h1>💪 Push-Up Challenge</h1>
-      </div>
+      <div class="brand"><span class="dot">●</span> Push-Up Challenge</div>
       <div class="header-right">
-        <button id="notify-btn" class="btn-notify hidden" title="Notificaties inschakelen">🔔</button>
-        <div id="user-badge" class="badge hidden"></div>
+        <button id="notify-btn" class="btn-notify hidden" type="button" title="Notificaties inschakelen" aria-label="Notificaties">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 8a6 6 0 1 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9z"/>
+            <path d="M10 21a2 2 0 0 0 4 0"/>
+          </svg>
+          <span class="pip"></span>
+        </button>
+        <span id="user-badge" class="who hidden"></span>
       </div>
     </header>
 
     <section id="cell-section" class="cell hidden">
-      <div class="cell-header">
-        <div>
-          <div class="cell-label" id="cell-label"></div>
-          <div class="cell-meta" id="cell-meta"></div>
-        </div>
+      <div class="cell-crumb">
+        <span class="who-cell" id="cell-label"></span>
         <button type="button" id="cell-close-btn" class="cell-close hidden">✕ Sluiten</button>
       </div>
 
-      <div class="cell-progress">
-        <div class="cell-tally" id="cell-tally"></div>
-        <div class="cell-bar"><div class="cell-bar-fill" id="cell-bar-fill"></div></div>
+      <div class="hero">
+        <div class="day"><span class="lbl" id="hero-day-lbl">Dag</span><span id="hero-day"></span></div>
+        <div class="target">
+          <div class="label" id="hero-target-lbl">Doel</div>
+          <div class="num"><span id="hero-target"></span><span class="unit">reps</span></div>
+        </div>
       </div>
 
-      <ul id="sets-list" class="sets-list"></ul>
+      <div id="backdated-banner" class="backdated hidden">
+        <span>↺</span>
+        <span id="backdated-text"></span>
+      </div>
+
+      <div class="track" id="cell-track">
+        <div class="fill" id="cell-bar-fill"></div>
+        <div class="over hidden" id="cell-bar-over"></div>
+        <div class="tick goal" id="cell-bar-goal"></div>
+      </div>
+
+      <div class="stat-row">
+        <div class="big" id="cell-tally"></div>
+        <div class="remain" id="cell-remain"></div>
+      </div>
+
+      <div id="achievement" class="achievement hidden">
+        <span id="achievement-label"></span>
+        <span class="mult" id="achievement-mult"></span>
+      </div>
+
+      <div class="sets">
+        <h4 class="sets-heading" id="sets-heading">Setjes</h4>
+        <ul id="sets-list" class="sets-list"></ul>
+      </div>
 
       <div id="add-set-area" class="add-set-area hidden">
-        <div class="reps-input-group">
-          <span class="reps-label-text">Reps:</span>
-          <input type="number" id="reps-input" min="1" value="10" />
+        <div class="add-set-row">
+          <div class="reps-input-group">
+            <span class="reps-label">Reps</span>
+            <input type="number" id="reps-input" min="1" value="10" inputmode="numeric">
+          </div>
+          <button id="record-btn" class="btn-record hidden" type="button" title="Motion opnemen" aria-label="Motion opnemen">
+            <span class="rec-dot"></span>
+          </button>
         </div>
-        <div id="record-area" class="record-area hidden">
-          <button id="record-btn" class="btn-record" type="button">🎙️ Opname starten</button>
-          <div id="record-status" class="record-status hidden"></div>
-        </div>
-        <button id="add-set-btn" class="btn-add-set">+ Setje toevoegen</button>
+        <div id="record-status" class="record-status hidden"></div>
+        <button id="add-set-btn" class="btn-add-set" type="button">
+          <span>Setje toevoegen</span>
+          <span class="arrow">→</span>
+        </button>
       </div>
     </section>
 
     <section id="motion-view" class="motion-view hidden">
-      <div class="motion-header">
-        <div>
-          <div class="motion-label" id="motion-label"></div>
-          <div class="motion-title" id="motion-title"></div>
+      <div class="cell-crumb">
+        <span class="who-cell" id="motion-label"></span>
+        <button type="button" class="cell-close" id="motion-close-btn">← Terug</button>
+      </div>
+      <div class="hero">
+        <div class="day" style="font-size:64px;"><span class="lbl">Reps gedet.</span><span id="motion-detected">–</span></div>
+        <div class="target">
+          <div class="label">Geregistreerd</div>
+          <div class="num"><span id="motion-registered">–</span><span class="unit">reps</span></div>
         </div>
-        <button type="button" class="motion-close" id="motion-close-btn">✕ Sluiten</button>
       </div>
       <div id="motion-summary" class="motion-summary"></div>
       <div id="motion-status" class="motion-status"></div>
       <div id="motion-chart" class="motion-chart"></div>
     </section>
 
-    <section id="progress-section">
-      <table id="progress-table">
+    <section id="progress-section" class="table-wrap">
+      <div class="table-head-out">
+        <h3 id="progress-heading">Voortgang</h3>
+        <span class="filter">↓ recent eerst</span>
+      </div>
+      <table id="progress-table" class="tbl">
         <thead id="progress-head"></thead>
         <tbody id="progress-body"></tbody>
       </table>

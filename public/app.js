@@ -58,7 +58,7 @@
     setInterval(refreshAll, 60000);
   }
 
-  // ── Notifications (unchanged from prior implementation) ─────────────────
+  // ── Notifications ─────────────────────────────────────────────────────────
 
   function setupNotifications() {
     const btn = document.getElementById('notify-btn');
@@ -153,7 +153,7 @@
   function renderBadge(name) {
     const badge = document.getElementById('user-badge');
     if (!name) return;
-    badge.innerHTML = `Ingelogd als <strong>${escapeHtml(name)}</strong>`;
+    badge.innerHTML = `Ingelogd als <b>${escapeHtml(name)}</b>`;
     badge.classList.remove('hidden');
   }
 
@@ -204,28 +204,82 @@
     const totalReps = currentCell.totalReps;
     const reached = totalReps >= target;
 
+    // Crumb label
     const labelEl = document.getElementById('cell-label');
-    labelEl.textContent = isOwn
-      ? (isToday ? `Vandaag — Dag ${viewState.day}` : `Inhalen — Dag ${viewState.day}`)
-      : `${viewState.name} — Dag ${viewState.day}${isToday ? ' (vandaag)' : ''}`;
+    labelEl.classList.remove('guest', 'backdated');
+    if (isOwn && isToday) {
+      labelEl.textContent = 'Vandaag';
+    } else if (isOwn && !isToday) {
+      labelEl.textContent = `Inhalen · Dag ${viewState.day}`;
+      labelEl.classList.add('backdated');
+    } else {
+      labelEl.textContent = `${viewState.name} · Dag ${viewState.day}${isToday ? ' (vandaag)' : ''}`;
+      labelEl.classList.add('guest');
+    }
 
-    const metaEl = document.getElementById('cell-meta');
-    metaEl.textContent = `Doel: ${target} reps`;
+    // Hero day & target
+    document.getElementById('hero-day').textContent = String(viewState.day);
+    document.getElementById('hero-target').textContent = String(target);
+    document.getElementById('hero-target-lbl').textContent = isOwn && !isToday ? 'Doel destijds' : 'Doel';
 
+    // Backdated banner
+    const banner = document.getElementById('backdated-banner');
+    if (isOwn && !isToday) {
+      const daysBack = today - viewState.day;
+      document.getElementById('backdated-text').textContent =
+        `${daysBack} ${daysBack === 1 ? 'dag' : 'dagen'} terug · backdated`;
+      banner.classList.remove('hidden');
+    } else {
+      banner.classList.add('hidden');
+    }
+
+    // Track + over + goal tick
+    const ratio = target > 0 ? Math.min(totalReps / target, 1) : 0;
+    const overRatio = target > 0 ? Math.max(0, (totalReps - target) / target) : 0;
+    document.getElementById('cell-bar-fill').style.width = `${ratio * 100}%`;
+    document.getElementById('cell-track').classList.toggle('done', reached);
+    const overEl = document.getElementById('cell-bar-over');
+    if (overRatio > 0) {
+      overEl.classList.remove('hidden');
+      overEl.style.left = '100%';
+      overEl.style.width = `${Math.min(overRatio, 1) * 50}%`;
+    } else {
+      overEl.classList.add('hidden');
+    }
+    document.getElementById('cell-bar-goal').style.left = '100%';
+
+    // Stat row
     const tallyEl = document.getElementById('cell-tally');
-    const status = reached ? '✓ Gehaald' : `nog ${target - totalReps} te gaan`;
-    tallyEl.innerHTML = `<strong>${totalReps}</strong> / ${target} reps · ${currentCell.numSets} ${currentCell.numSets === 1 ? 'set' : 'sets'} · ${status}`;
-    tallyEl.classList.toggle('reached', reached);
+    const setLabel = currentCell.numSets === 1 ? '1 set' : `${currentCell.numSets} sets`;
+    tallyEl.classList.toggle('empty', totalReps === 0);
+    tallyEl.innerHTML =
+      `${totalReps}<span class="slash">/</span>${target}` +
+      (currentCell.numSets > 0 ? ` <span class="sets-suffix">· ${setLabel}</span>` : '');
 
-    const fillEl = document.getElementById('cell-bar-fill');
-    const pct = Math.min(100, target > 0 ? Math.round(100 * totalReps / target) : 0);
-    fillEl.style.width = `${pct}%`;
-    fillEl.classList.toggle('reached', reached);
+    const remainEl = document.getElementById('cell-remain');
+    remainEl.classList.remove('over');
+    if (totalReps >= target) {
+      const over = totalReps - target;
+      if (over > 0) {
+        remainEl.innerHTML = `+${over} voorbij`;
+        remainEl.classList.add('over');
+      } else {
+        remainEl.innerHTML = `<b>gehaald</b>`;
+      }
+    } else {
+      remainEl.innerHTML = `nog <b>${target - totalReps}</b>`;
+    }
+
+    // Achievement
+    renderAchievement(totalReps, target);
 
     document.getElementById('cell-close-btn').classList.toggle('hidden', isDefaultView());
 
+    // Sets
+    document.getElementById('sets-heading').textContent = isOwn && isToday ? 'Setjes vandaag' : 'Setjes';
     renderSetsList();
 
+    // Add-set area
     const addArea = document.getElementById('add-set-area');
     if (isOwn) {
       addArea.classList.remove('hidden');
@@ -234,6 +288,26 @@
       addArea.classList.add('hidden');
       updateRecordVisibility(false);
     }
+  }
+
+  function renderAchievement(totalReps, target) {
+    const wrap = document.getElementById('achievement');
+    if (totalReps < target || target === 0) {
+      wrap.classList.add('hidden');
+      return;
+    }
+    const mult = totalReps / target;
+    let label;
+    if (mult >= 2)        label = 'Beast Mode';
+    else if (mult >= 1.5) label = 'Sterk';
+    else if (mult > 1)    label = 'Voorbij';
+    else                  label = 'Doel';
+
+    wrap.classList.remove('hidden', 'beast');
+    if (mult >= 1.5) wrap.classList.add('beast');
+    document.getElementById('achievement-label').textContent = `✓ ${label}`;
+    document.getElementById('achievement-mult').textContent =
+      `×${mult.toFixed(mult >= 2 ? 1 : 2)}`;
   }
 
   function renderSetsList() {
@@ -246,9 +320,14 @@
       const empty = document.createElement('li');
       empty.className = 'sets-empty';
       const isToday = progressData && viewState && viewState.day === progressData.today;
-      empty.textContent = isOwn
-        ? `Nog geen setjes ${isToday ? 'vandaag' : 'voor deze dag'} — voeg er eentje toe.`
-        : 'Nog geen setjes voor deze dag.';
+      const isOwnBackdated = isOwn && !isToday;
+      const heading = isOwn ? 'Nog geen setjes' : 'Nog geen setjes';
+      const sub = isOwnBackdated
+        ? 'Backdated set toevoegen — geen motion-recording (alleen vandaag).'
+        : (isOwn
+            ? (isToday ? 'Begin met een paar reps — zelfs 5 telt.' : 'Voeg er eentje toe.')
+            : 'Voor deze dag is nog niets geregistreerd.');
+      empty.innerHTML = `<b>${heading}</b>${escapeHtml(sub)}`;
       ul.appendChild(empty);
       return;
     }
@@ -260,26 +339,47 @@
 
       const editing = editingSetId === s.id;
       const time = formatHHMM(s.recordedAt);
+      const lap = String(idx + 1).padStart(2, '0');
+
+      const repsHtml = editing
+        ? `<input type="number" min="1" id="set-reps-input-${s.id}" class="set-reps-input" value="${s.reps}">`
+        : `<span class="set-reps">${s.reps}<span class="u">reps</span></span>`;
+
+      const sparkHtml = s.hasMotion
+        ? `<svg class="spark" viewBox="0 0 38 14" width="38" height="14" aria-hidden="true">
+             <polyline class="line" points="0,7 5,4 10,10 16,2 22,11 28,5 34,9 38,7"/>
+           </svg>`
+        : '';
+
       const motionBtn = s.hasMotion
-        ? `<button type="button" class="set-action set-motion" data-id="${s.id}" title="Bekijk beweging">📊</button>`
+        ? `<button type="button" class="set-action set-motion" data-id="${s.id}" title="Bekijk beweging" aria-label="Bekijk beweging">
+             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h3l3-7 4 14 3-7h5"/></svg>
+           </button>`
         : '';
+
       const ownActions = isOwn && !editing
-        ? `<button type="button" class="set-action set-edit" data-id="${s.id}" title="Wijzig reps">✎</button>
-           <button type="button" class="set-action set-delete" data-id="${s.id}" title="Verwijder">🗑️</button>`
+        ? `<button type="button" class="set-action set-edit" data-id="${s.id}" title="Wijzig reps" aria-label="Wijzig reps">
+             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.5V21h3.5L18 9.5 14.5 6 3 17.5z"/></svg>
+           </button>
+           <button type="button" class="set-action set-delete danger" data-id="${s.id}" title="Verwijder" aria-label="Verwijder">
+             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
+           </button>`
         : '';
-      const repsCell = editing
-        ? `<span class="set-reps-edit">
-             <input type="number" min="1" id="set-reps-input-${s.id}" value="${s.reps}" />
-             <button type="button" class="set-action set-save" data-id="${s.id}" title="Opslaan">✓</button>
-             <button type="button" class="set-action set-cancel" data-id="${s.id}" title="Annuleren">✕</button>
-           </span>`
-        : `<span class="set-reps"><strong>${s.reps}</strong> reps</span>`;
+
+      const editingActions = editing
+        ? `<button type="button" class="set-action set-save" data-id="${s.id}" title="Opslaan" aria-label="Opslaan">
+             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>
+           </button>
+           <button type="button" class="set-action set-cancel" data-id="${s.id}" title="Annuleren" aria-label="Annuleren">
+             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+           </button>`
+        : '';
 
       li.innerHTML = `
-        <span class="set-num">#${idx + 1}</span>
-        ${repsCell}
-        <span class="set-time">${time}</span>
-        <span class="set-actions">${motionBtn}${ownActions}</span>
+        <span class="set-lap">${lap}</span>
+        ${repsHtml}
+        <span class="set-time">${time}${sparkHtml ? `<span>${sparkHtml}</span>` : ''}</span>
+        <span class="set-actions">${motionBtn}${editingActions || ownActions}</span>
       `;
       ul.appendChild(li);
     });
@@ -360,8 +460,8 @@
     }
     const btn = document.getElementById('add-set-btn');
     btn.disabled = true;
-    const originalText = btn.textContent;
-    btn.textContent = 'Bezig...';
+    const original = btn.innerHTML;
+    btn.innerHTML = '<span>Bezig…</span>';
 
     const motion = capturedMotion;
     const payload = motion
@@ -373,7 +473,7 @@
       body: JSON.stringify(payload),
     });
     btn.disabled = false;
-    btn.textContent = originalText;
+    btn.innerHTML = original;
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
@@ -421,12 +521,14 @@
   }
 
   function updateRecordVisibility(isToday) {
-    const area = document.getElementById('record-area');
-    if (!area) return;
+    const btn = document.getElementById('record-btn');
+    const status = document.getElementById('record-status');
+    if (!btn) return;
     if (recordState === 'unsupported' || !isToday) {
-      area.classList.add('hidden');
+      btn.classList.add('hidden');
+      status.classList.add('hidden');
     } else {
-      area.classList.remove('hidden');
+      btn.classList.remove('hidden');
     }
   }
 
@@ -567,9 +669,9 @@
   function showRecordError(message) {
     const status = document.getElementById('record-status');
     if (!status) return;
-    status.textContent = message;
-    status.classList.remove('hidden');
+    status.classList.remove('hidden', 'captured');
     status.classList.add('error');
+    status.innerHTML = `<span class="live"></span><span>${escapeHtml(message)}</span>`;
   }
 
   function renderRecordUI() {
@@ -578,29 +680,30 @@
     if (!btn || !status) return;
 
     btn.classList.remove('recording', 'captured');
-    status.classList.remove('error');
+    status.classList.remove('error', 'captured');
 
     if (recordState === 'idle') {
-      btn.textContent = '🎙️ Opname starten';
       btn.disabled = false;
+      btn.title = 'Motion opnemen';
       status.classList.add('hidden');
-      status.textContent = '';
+      status.innerHTML = '';
     } else if (recordState === 'recording') {
       const ms = performance.now() - recordStartedAt;
       const samples = buf ? buf.t.length : 0;
-      btn.textContent = '⏹ Stop opname';
       btn.classList.add('recording');
       btn.disabled = false;
-      status.textContent = `${formatDuration(ms)} · ${samples} samples`;
+      btn.title = 'Stop opname';
       status.classList.remove('hidden');
+      status.innerHTML = `<span class="live"></span><span>REC · ${formatDuration(ms)} · ${samples} samples</span>`;
     } else if (recordState === 'captured') {
       const ms = capturedMotion?.durationMs ?? 0;
       const samples = capturedMotion?.sampleCount ?? 0;
-      btn.textContent = '↺ Opnieuw opnemen';
       btn.classList.add('captured');
       btn.disabled = false;
-      status.textContent = `Opname klaar · ${formatDuration(ms)} · ${samples} samples`;
+      btn.title = 'Opnieuw opnemen';
       status.classList.remove('hidden');
+      status.classList.add('captured');
+      status.innerHTML = `<span class="live"></span><span>OPNAME · ${formatDuration(ms)} · ${samples} samples</span>`;
     }
   }
 
@@ -609,45 +712,54 @@
   function renderTable(data) {
     const head = document.getElementById('progress-head');
     const body = document.getElementById('progress-body');
+    const heading = document.getElementById('progress-heading');
+    if (heading) heading.textContent = `Voortgang · ${data.today} ${data.today === 1 ? 'dag' : 'dagen'}`;
 
     const headerRow = document.createElement('tr');
     headerRow.innerHTML = '<th>Dag</th>';
     data.participants.forEach(name => {
       const th = document.createElement('th');
       th.textContent = name;
+      if (name === myName) th.classList.add('me');
       headerRow.appendChild(th);
     });
     head.innerHTML = '';
     head.appendChild(headerRow);
 
-    // Lookup by "name:day" → cell aggregate
     const lookup = {};
     data.cells.forEach(c => { lookup[`${c.name}:${c.day}`] = c; });
 
     body.innerHTML = '';
     for (let day = data.today; day >= 1; day--) {
       const tr = document.createElement('tr');
-      if (day === data.today) tr.classList.add('day-today');
+      const isToday = day === data.today;
+      if (isToday) tr.classList.add('today');
 
       const dayTd = document.createElement('td');
-      dayTd.title = `doel: ${day} reps`;
-      dayTd.innerHTML = `<span class="day-num">Dag ${day}</span>${day === data.today ? '<span class="today-label">vandaag</span>' : ''}`;
+      dayTd.className = 'day-cell';
+      const labelHtml = isToday ? '<span class="lbl">vandaag</span>' : '';
+      dayTd.innerHTML =
+        `<span class="num">${day}</span>${labelHtml}<span class="target">doel ${day}</span>`;
       tr.appendChild(dayTd);
 
       data.participants.forEach(name => {
         const td = document.createElement('td');
         const entry = lookup[`${name}:${day}`];
-        td.title = `doel: ${day} reps`;
         if (entry && entry.numSets > 0) {
           const reached = entry.totalReps >= day;
-          const motionIcon = entry.hasMotionCount > 0
-            ? ' <span class="cell-motion" title="Beweging opgenomen">📊</span>'
+          const beast = reached && entry.totalReps >= day * 1.5;
+          const cls = reached ? (beast ? 'cell-done beast' : 'cell-done') : 'cell-done partial';
+          const sparkHtml = entry.hasMotionCount > 0
+            ? `<svg class="spark-cell" viewBox="0 0 24 10" aria-hidden="true">
+                 <polyline class="line" points="0,5 4,2 8,8 12,1 16,7 20,3 24,5"/>
+               </svg>`
             : '';
-          td.innerHTML = `<span class="cell-reps ${reached ? 'cell-done' : 'cell-partial'}">${entry.totalReps}r</span> <span class="cell-sets">${entry.numSets}s</span>${motionIcon}`;
+          td.innerHTML =
+            `<span class="${cls}"><span>${entry.totalReps}</span><span class="sub">${entry.numSets}s</span>${sparkHtml}</span>`;
         } else if (day < data.today) {
-          td.innerHTML = '<span class="cell-missed">✗</span>';
+          td.innerHTML = '<span class="cell-miss">·</span>';
         } else {
-          td.innerHTML = '<span class="cell-pending">–</span>';
+          td.innerHTML = '<span class="cell-empty">–</span>';
         }
         if (myName) {
           td.classList.add('cell-clickable');
@@ -688,16 +800,18 @@
   async function showMotionView(setId) {
     const section = document.getElementById('motion-view');
     const labelEl = document.getElementById('motion-label');
-    const titleEl = document.getElementById('motion-title');
     const summaryEl = document.getElementById('motion-summary');
     const statusEl = document.getElementById('motion-status');
     const chartEl = document.getElementById('motion-chart');
+    const detectedEl = document.getElementById('motion-detected');
+    const registeredEl = document.getElementById('motion-registered');
 
     section.classList.remove('hidden');
-    labelEl.textContent = 'Beweging';
-    titleEl.textContent = 'Bezig met laden…';
+    labelEl.textContent = 'Motion · Bezig met laden';
     summaryEl.innerHTML = '';
     chartEl.innerHTML = '';
+    detectedEl.textContent = '–';
+    registeredEl.textContent = '–';
     statusEl.classList.remove('error');
     statusEl.textContent = 'Bezig met laden…';
     section.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -707,8 +821,11 @@
         fetchMotion(setId),
         loadPlotly(),
       ]);
-      labelEl.textContent = `Beweging — Dag ${data.day} (${data.reps} reps)`;
-      titleEl.textContent = data.name;
+      const meta = data.analysisMeta || {};
+      const detected = meta.pushups ?? data.analyzedPushups ?? '?';
+      labelEl.textContent = `Motion · ${data.name} · Dag ${data.day}`;
+      detectedEl.textContent = String(detected);
+      registeredEl.textContent = String(data.reps);
       renderMotionSummary(summaryEl, data);
       renderMotionChart(Plotly, chartEl, data);
       statusEl.textContent = '';
@@ -733,17 +850,24 @@
     const sampleHz = (data.sampleCount && data.durationMs)
       ? Math.round(1000 * data.sampleCount / data.durationMs)
       : '?';
+    const tempo = (meta.pushups && data.durationMs)
+      ? (meta.pushups / (data.durationMs / 1000)).toFixed(2)
+      : null;
+
     const items = [
-      ['Reps geregistreerd', `<strong>${data.reps}</strong>`],
-      ['Push-ups gedetecteerd', `<strong>${meta.pushups ?? data.analyzedPushups ?? '?'}</strong>`],
-      ['Duur', `${(data.durationMs / 1000).toFixed(2)} s`],
-      ['Samples', `${data.sampleCount} (~${sampleHz} Hz)`],
-      ['Dominante as', meta.dominantAxis ?? '?'],
-      ['Drempel', meta.threshold?.toFixed(2) ?? '?'],
-      ['Algoritme', `v${meta.algorithmVersion ?? '?'}`],
-    ];
-    el.innerHTML = items.map(([k, v]) =>
-      `<div><div class="label">${k}</div><div class="value">${v}</div></div>`
+      { label: 'Duur',     value: `${(data.durationMs / 1000).toFixed(1)}<span class="unit">s</span>` },
+      { label: 'Samples',  value: `${data.sampleCount}<span class="unit">~${sampleHz}Hz</span>` },
+      tempo ? { label: 'Tempo',    value: `${tempo}<span class="unit">/s</span>` } : null,
+      { label: 'Dominant', value: `${(meta.dominantAxis ?? '?').toString().toUpperCase()}-as`, info: true },
+      meta.threshold != null ? { label: 'Drempel',  value: meta.threshold.toFixed(2) } : null,
+      meta.algorithmVersion != null ? { label: 'Algoritme', value: `v${meta.algorithmVersion}` } : null,
+    ].filter(Boolean);
+
+    el.innerHTML = items.map(i =>
+      `<div>
+         <div class="label">${i.label}</div>
+         <div class="value${i.info ? ' info' : ''}">${i.value}</div>
+       </div>`
     ).join('');
   }
 
@@ -763,10 +887,16 @@
       return best;
     });
 
-    const isDark = !window.matchMedia('(prefers-color-scheme: light)').matches;
-    const palette = isDark
-      ? { paper: '#1e293b', plot: '#0f172a', text: '#f1f5f9', grid: '#334155', x: '#ef4444', y: '#22c55e', z: '#38bdf8', peak: '#fbbf24' }
-      : { paper: '#f1f5f9', plot: '#ffffff', text: '#0f172a', grid: '#cbd5e1', x: '#dc2626', y: '#16a34a', z: '#0284c7', peak: '#d97706' };
+    const palette = {
+      paper: '#0e0f12',
+      plot:  '#16181d',
+      text:  '#f2f2ee',
+      grid:  '#25282f',
+      x:     '#ef4444',
+      y:     '#22c55e',
+      z:     '#38bdf8',
+      peak:  '#f59e0b',
+    };
     const colors = { x: palette.x, y: palette.y, z: palette.z };
 
     const lineTrace = (name, x, y, color, axis) => ({
@@ -800,7 +930,7 @@
     const layout = {
       paper_bgcolor: palette.paper,
       plot_bgcolor: palette.plot,
-      font: { color: palette.text, size: 11 },
+      font: { color: palette.text, size: 11, family: 'Inter, system-ui, sans-serif' },
       margin: { t: 24, r: 18, b: 40, l: 56 },
       legend: { orientation: 'h', y: 1.08, font: { size: 10 } },
       grid: { rows: 3, columns: 1, pattern: 'independent' },
